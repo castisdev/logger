@@ -12,9 +12,14 @@ castis-formatted logger, based on [Boost.log](http://www.boost.org/doc/libs/1_55
 ## Example
 
 ```cpp
-castis::logger::init("example", "1.0.0");
-CILOG(debug) << "A debug message";
-CILOG(error) << "An error severity message";
+#include "castislogger.h"
+int main()
+{
+  castis::logger::init("example", "1.0.0");
+  CILOG(debug) << "A debug message";
+  CILOG(error) << "An error severity message";
+  return 0;
+}
 ```
 
 generates log file `2014-08-07_example_0.log` and record,
