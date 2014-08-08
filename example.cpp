@@ -1,6 +1,7 @@
 #include "castislogger.h"
 //
-int main() {
+int main()
+{
   castis::logger::init("example", "1.0.0");
 
   CILOG(foo) << "Just a foo";
@@ -14,9 +15,8 @@ int main() {
   CILOG(exception) << "A exception severity message";
   CILOG(critical) << "A critical severity message";
 
-  for (int i = 0; i < 100000; ++i) {
+  for (int i = 0; i < 100000; ++i)
     CILOG(info) << i << "th log" << " with " << "some message";
-  }
 
   return 0;
 }

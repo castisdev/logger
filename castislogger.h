@@ -23,7 +23,8 @@ typedef sinks::synchronous_sink<sinks::text_file_backend> file_sink;
   BOOST_LOG_SEV(my_logger::get(), severity) << "," << boost::filesystem::path(__FILE__).filename().string() << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
 
 // We define our own severity levels
-enum severity_level {
+enum severity_level
+{
   foo,
   debug,
   report,
@@ -37,8 +38,10 @@ enum severity_level {
 };
 
 // The operator is used for regular stream formatting
-std::ostream& operator<< (std::ostream& strm, severity_level level) {
-  static const char* strings[] = {
+std::ostream& operator<< (std::ostream& strm, severity_level level)
+{
+  static const char* strings[] =
+  {
     "Foo",
     "Debug",
     "Report",
@@ -64,8 +67,10 @@ struct severity_tag;
 
 // The operator is used when putting the severity level to log
 logging::formatting_ostream& operator<< (logging::formatting_ostream& strm,
-    logging::to_log_manip<severity_level, severity_tag> const& manip) {
-  static const char* strings[] = {
+    logging::to_log_manip<severity_level, severity_tag> const& manip)
+{
+  static const char* strings[] =
+  {
     "Foo",
     "Debug",
     "Report",
@@ -79,20 +84,22 @@ logging::formatting_ostream& operator<< (logging::formatting_ostream& strm,
   };
 
   severity_level level = manip.get();
-  if (static_cast<std::size_t>(level) < sizeof(strings) / sizeof(*strings)) {
+  if (static_cast<std::size_t>(level) < sizeof(strings) / sizeof(*strings))
     strm << strings[level];
-  } else {
+  else
     strm << static_cast< int >(level);
-  }
 
   return strm;
 }
 
-namespace castis {
-  namespace logger {
+namespace castis
+{
+  namespace logger
+  {
     static std::string app_name_;
     static std::string app_version_;
-    static void reset_target(const std::string& target) {
+    static void reset_target(const std::string& target)
+    {
       logging::core::get()->remove_all_sinks();
       boost::shared_ptr<file_sink> sink(new file_sink(
             keywords::file_name = "%Y-%m-%d_" + app_name_ + "_%N.log",
@@ -100,6 +107,7 @@ namespace castis {
             keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0) /*< ...or at midnight >*/
             ));
       sink->set_formatter(
+
           expr::stream
           << app_name_
           << "," << app_version_
@@ -108,13 +116,14 @@ namespace castis {
           << "," << expr::smessage
           );
       sink->locked_backend()->set_file_collector(sinks::file::make_collector(
-            keywords::target = target
-            // keywords::max_size = 16 * 1024 * 1024,  // maximum total size of the stored files, in bytes
-            // keywords::min_free_space = 100 * 1024 * 1024  // minimum free space on the drive, in bytes
-            ));
+          keywords::target = target
+          // keywords::max_size = 16 * 1024 * 1024,  // maximum total size of the stored files, in bytes
+          // keywords::min_free_space = 100 * 1024 * 1024  // minimum free space on the drive, in bytes
+          ));
       logging::core::get()->add_sink(sink);
     }
-    static void init(const std::string& app_name, const std::string& app_version) {
+    static void init(const std::string& app_name, const std::string& app_version)
+    {
       app_name_ = app_name;
       app_version_ = app_version;
       logging::add_common_attributes();
