@@ -22,7 +22,7 @@ int main()
 }
 ```
 
-generates log file `./log/2014-08/2014-08-07_example_0.log` and record,
+generates log file `./log/2014-08/2014-08-07_example.log` and record,
 
 ```
 example,1.0.0,2014-08-07,16:45:12.862521,Debug,,example.cpp::main:8,,A debug message
