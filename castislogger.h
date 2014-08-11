@@ -166,7 +166,7 @@ class cilog_backend:
       boost::filesystem::path monthly_target_path(target_path_ / monthly_path_ss.str());
 
       uintmax_t file_index = 0;
-      boost::regex pattern(filename_prefix_ss.str() + "_" + file_name_suffix_ + "[\\[\\]0-9]*.log");
+      boost::regex pattern(filename_prefix_ss.str() + "[\\[\\]0-9]*" + "_" + file_name_suffix_ + ".log");
       if (boost::filesystem::exists(monthly_target_path) && boost::filesystem::is_directory(monthly_target_path))
       {
         boost::filesystem::directory_iterator it(monthly_target_path), end;
@@ -192,11 +192,11 @@ class cilog_backend:
 
       std::stringstream filename_ss;
       filename_ss << filename_prefix_ss.str();
-      filename_ss << "_" + file_name_suffix_;
       if (file_index > 0)
       {
         filename_ss << "[" << file_index << "]";
       }
+      filename_ss << "_" + file_name_suffix_;
       filename_ss << ".log";
       return boost::filesystem::path(monthly_target_path / filename_ss.str());
     }
