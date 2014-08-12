@@ -1,8 +1,11 @@
 #pragma once
+
 #include <cstddef>
 #include <iostream>
+
 #include <boost/regex.hpp>
 #include <boost/bind.hpp>
+
 #include <boost/log/expressions.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
@@ -11,6 +14,7 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
+
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -34,34 +38,9 @@ enum severity_level
   critical
 };
 
-// The operator is used for regular stream formatting
-std::ostream& operator<< (std::ostream& strm, severity_level level)
-{
-  static const char* strings[] =
-  {
-    "Foo",
-    "Debug",
-    "Report",
-    "Information",
-    "Success",
-    "Warning",
-    "Error",
-    "Fail",
-    "Exception",
-    "Critical"
-  };
-
-  if (static_cast<std::size_t>(level) < sizeof(strings) / sizeof(*strings))
-    strm << strings[level];
-  else
-    strm << static_cast< int >(level);
-
-  return strm;
-}
-
 struct severity_tag;
 // The operator is used when putting the severity level to log
-boost::log::formatting_ostream& operator<< (
+inline boost::log::formatting_ostream& operator<< (
     boost::log::formatting_ostream& strm,
     boost::log::to_log_manip<severity_level, severity_tag> const& manip)
 {
@@ -237,7 +216,7 @@ namespace castis
 {
   namespace logger
   {
-    static void init(
+    inline void init(
         const std::string& app_name,
         const std::string& app_version,
         const std::string& target,
@@ -264,7 +243,7 @@ namespace castis
           << "," << expr::smessage);
       boost::log::core::get()->add_sink(sink);
     }
-  }
+  };
 }
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(
