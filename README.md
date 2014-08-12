@@ -32,4 +32,9 @@ example,1.0.0,2014-08-07,16:45:12.862916,Error,example.cpp::main:9,,An error sev
 ## Dependency
 
 * Boost 1.56
+    * log
+    * thread
+    * filesystem
+    * system
+    * regex
 
