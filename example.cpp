@@ -4,6 +4,7 @@ int main()
 {
   castis::logger::init("example", "1.0.0", "./log");
 
+  // support severity levels
   CILOG(foo) << "Just a foo";
   CILOG(debug) << "A normal severity message";
   CILOG(report) << "A notification severity message";
@@ -15,7 +16,11 @@ int main()
   CILOG(exception) << "A exception severity message";
   CILOG(critical) << "A critical severity message";
 
-  for (int i = 0; i < 100000; ++i)
+  // support both streams and printf-style format
+  CILOG(report) << "strings(" << "abc" << "), integers(" << 1 << "), float numbers(" << 3.14 << ")...";
+  CILOGF(report, "strings(%s), integers(%d), float numbers(%.2f)...", "abc", 1, 3.14);
+
+  for (int i = 0; i < 1000000; ++i)
   {
     CILOG(info) << i << "th log" << " with " << "some message";
   }

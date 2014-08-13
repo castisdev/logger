@@ -2,10 +2,9 @@
 
 #include <cstddef>
 #include <iostream>
-
 #include <boost/regex.hpp>
 #include <boost/bind.hpp>
-
+#include <boost/format.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
@@ -14,7 +13,6 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
-
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -23,6 +21,12 @@
   BOOST_LOG_SEV(my_logger::get(), severity)\
   << boost::filesystem::path(__FILE__).filename().string()\
   << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
+
+#define CILOGF(severity, format, ...)\
+  BOOST_LOG_SEV(my_logger::get(), severity)\
+  << boost::filesystem::path(__FILE__).filename().string()\
+  << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"\
+  << castis::logger::formatter(format, ##__VA_ARGS__)
 
 enum severity_level
 {
@@ -243,7 +247,24 @@ namespace castis
           << "," << expr::smessage);
       boost::log::core::get()->add_sink(sink);
     }
-  };
+
+    inline boost::format formatter_r(boost::format& format)
+    {
+      return format;
+    }
+
+    template <typename T, typename... Params>
+      inline boost::format formatter_r(boost::format& format, T arg, Params... parameters)
+      {
+        return formatter_r(format % arg, parameters...);
+      }
+
+    template <typename T, typename... Params>
+      inline boost::format formatter(const char* const format, T arg, Params... parameters)
+      {
+        return formatter_r(boost::format(format) % arg, parameters...);
+      }
+  }
 }
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(
