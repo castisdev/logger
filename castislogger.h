@@ -6,13 +6,14 @@
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/log/expressions.hpp>
+#include <boost/log/sinks/async_frontend.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/utility/formatting_ostream.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/support/date_time.hpp>
-#include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -220,21 +221,26 @@ namespace castis
 {
   namespace logger
   {
-    inline void init(
+    typedef boost::log::sinks::synchronous_sink<cilog_backend> cilog_sync_sink_t;
+    typedef boost::log::sinks::asynchronous_sink<cilog_backend> cilog_async_sink_t;
+
+    inline void init_logger(
         const std::string& app_name,
         const std::string& app_version,
-        const std::string& target,
+        const std::string& target = "./log",
         unsigned long long rotation_size = 100 * 100 * 1024,
         bool auto_flush = true)
     {
       namespace expr = boost::log::expressions;
       boost::log::add_common_attributes();
-      typedef boost::log::sinks::synchronous_sink< cilog_backend > sink_t;
-      boost::shared_ptr<sink_t> sink(
-          new sink_t(boost::filesystem::path(target),
-            app_name,
-            rotation_size,
-            auto_flush));
+      boost::shared_ptr<cilog_backend> backend(
+          new cilog_backend(
+          boost::filesystem::path(target),
+          app_name,
+          rotation_size,
+          auto_flush));
+
+      boost::shared_ptr<cilog_sync_sink_t> sink(new cilog_sync_sink_t(backend));
       sink->set_formatter(
           expr::stream
           << app_name
@@ -246,6 +252,47 @@ namespace castis
           << "," << expr::attr<severity_level, severity_tag>("Severity")
           << "," << expr::smessage);
       boost::log::core::get()->add_sink(sink);
+    }
+
+    inline boost::shared_ptr<cilog_async_sink_t> init_async_logger(
+        const std::string& app_name,
+        const std::string& app_version,
+        const std::string& target = "./log",
+        unsigned long long rotation_size = 100 * 100 * 1024,
+        bool auto_flush = true)
+    {
+      namespace expr = boost::log::expressions;
+      boost::log::add_common_attributes();
+      boost::shared_ptr<cilog_backend> backend(
+          new cilog_backend(
+          boost::filesystem::path(target),
+          app_name,
+          rotation_size,
+          auto_flush));
+
+      boost::shared_ptr<cilog_async_sink_t> sink(new cilog_async_sink_t(backend));
+      sink->set_formatter(
+          expr::stream
+          << app_name
+          << "," << app_version
+          << ","
+          << expr::format_date_time<boost::posix_time::ptime>(
+            "TimeStamp",
+            "%Y-%m-%d,%H:%M:%S.%f")
+          << "," << expr::attr<severity_level, severity_tag>("Severity")
+          << "," << expr::smessage);
+      boost::log::core::get()->add_sink(sink);
+
+      return sink;
+    }
+
+    inline void stop_logger(boost::shared_ptr<cilog_async_sink_t>& sink)
+    {
+      boost::shared_ptr<boost::log::core> core = boost::log::core::get();
+      core->remove_sink(sink);
+      sink->stop();
+      sink->flush();
+      sink.reset();
     }
 
     inline boost::format formatter_r(boost::format& format)
