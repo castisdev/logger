@@ -306,6 +306,11 @@ namespace castis
         return formatter_r(format % arg, parameters...);
       }
 
+    inline boost::format formatter(const char* const format)
+    {
+      return boost::format(format);
+    }
+
     template <typename T, typename... Params>
       inline boost::format formatter(const char* const format, T arg, Params... parameters)
       {
