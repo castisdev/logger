@@ -6,7 +6,7 @@ find_package(Boost 1.56 COMPONENTS log log_setup thread filesystem system regex 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
-add_executable(example example.cpp)
+add_executable(example examples/example.cpp)
 if(WIN32)
   target_link_libraries(example ${Boost_LIBRARIES})
 else(WIN32)
@@ -15,7 +15,7 @@ else(WIN32)
   target_link_libraries(example ${Boost_LIBRARIES} pthread rt)
 endif(WIN32)
 
-add_executable(example_async example_async.cpp)
+add_executable(example_async examples/example_async.cpp)
 if(WIN32)
   target_link_libraries(example_async ${Boost_LIBRARIES})
 else(WIN32)

@@ -1,8 +1,8 @@
-#include "castislogger.h"
+#include "logger/castislogger.h"
 
 int main()
 {
-  castis::logger::init_logger("example", "1.0.0");
+  auto sink = castis::logger::init_async_logger("example", "1.0.0");
 
   // support severity levels
   CILOG(foo) << "Just a foo";
@@ -24,6 +24,8 @@ int main()
   {
     CILOG(info) << i << "th log with some message";
   }
+
+  castis::logger::stop_logger(sink);
 
   return 0;
 }
