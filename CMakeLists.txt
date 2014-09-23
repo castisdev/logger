@@ -33,8 +33,8 @@ set_target_properties(
 if(WIN32)
   target_link_libraries(unittest ${Boost_LIBRARIES})
 else(WIN32)
-  add_definitions(-Wall -g -Os)
-  set_target_properties(example_async PROPERTIES COMPILE_FLAGS "-std=c++11")
+  add_definitions(-Wall -g)
+  set_target_properties(unittest PROPERTIES COMPILE_FLAGS "-std=c++11")
   target_link_libraries(
     unittest
     ${Boost_LIBRARIES}
