@@ -18,7 +18,8 @@ TEST(LoggerTest, dummy) {
   // add a log line
   CILOG(foo) << "Just a foo";
   // Check log file existance
-  std::string filepath = datetime_string_with_format("./log/%Y-%m/%Y-%m-%d_example.log");
+  std::string filepath = datetime_string_with_format(
+      "./log/%Y-%m/%Y-%m-%d_example.log");
   std::ifstream file(filepath);
   ASSERT_TRUE(file.is_open());
 }

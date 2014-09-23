@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstddef>
-#include <iostream>
 #include <boost/regex.hpp>
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
@@ -17,6 +15,9 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <cstddef>
+#include <iostream>
+#include <string>
 
 #define CILOG(severity)\
   BOOST_LOG_SEV(my_logger::get(), severity)\
@@ -29,8 +30,7 @@
   << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"\
   << castis::logger::formatter(format, ##__VA_ARGS__)
 
-enum severity_level
-{
+enum severity_level {
   foo,
   debug,
   report,
@@ -47,10 +47,8 @@ struct severity_tag;
 // The operator is used when putting the severity level to log
 inline boost::log::formatting_ostream& operator<< (
     boost::log::formatting_ostream& strm,
-    boost::log::to_log_manip<severity_level, severity_tag> const& manip)
-{
-  static const char* strings[] =
-  {
+    boost::log::to_log_manip<severity_level, severity_tag> const& manip) {
+  static const char* strings[] = {
     "Foo",
     "Debug",
     "Report",
@@ -72,173 +70,152 @@ inline boost::log::formatting_ostream& operator<< (
   return strm;
 }
 
-class cilog_backend:
-  public boost::log::sinks::basic_formatted_sink_backend<
-    char,
-    boost::log::sinks::synchronized_feeding>
-{
-  private:
-    bool auto_flush_;
-    boost::filesystem::ofstream file_;
-    boost::filesystem::path target_path_;
-    boost::filesystem::path file_path_;
-    std::string file_name_suffix_;
-    uintmax_t rotation_size_;
-    uintmax_t characters_written_;
+class cilog_backend
+: public boost::log::sinks::basic_formatted_sink_backend<
+    char, boost::log::sinks::synchronized_feeding> {
+ private:
+  bool auto_flush_;
+  boost::filesystem::ofstream file_;
+  boost::filesystem::path target_path_;
+  boost::filesystem::path file_path_;
+  std::string file_name_suffix_;
+  uintmax_t rotation_size_;
+  uintmax_t characters_written_;
 
-  public:
-    explicit cilog_backend(
-        boost::filesystem::path const& target_path,
-        std::string const& file_name_suffix,
-        uintmax_t rotation_size,
-        bool auto_flush)
+ public:
+  explicit cilog_backend(
+      boost::filesystem::path const& target_path,
+      std::string const& file_name_suffix,
+      uintmax_t rotation_size,
+      bool auto_flush)
       : auto_flush_(auto_flush),
-        target_path_(target_path),
-        file_name_suffix_(file_name_suffix),
-        rotation_size_(rotation_size),
-        characters_written_(0)
-    {
+      target_path_(target_path),
+      file_name_suffix_(file_name_suffix),
+      rotation_size_(rotation_size),
+      characters_written_(0) {
+  }
+
+  void consume(
+      boost::log::record_view const& /*rec*/,
+      string_type const& formatted_message) {
+    if ((file_.is_open() &&
+         (characters_written_ + formatted_message.size() >= rotation_size_))
+        ||
+        (!file_.good())) {
+      rotate_file();
     }
 
-    void consume(
-        boost::log::record_view const& /*rec*/,
-        string_type const& formatted_message)
-    {
-      if ((file_.is_open() &&
-           (characters_written_ + formatted_message.size() >= rotation_size_))
-          ||
-          (!file_.good()))
-      {
-        rotate_file();
+    if (!file_.is_open()) {
+      file_path_ = generate_filepath();
+      boost::filesystem::create_directories(file_path_.parent_path());
+      file_.open(file_path_);
+      if (!file_.is_open()) {
+        // failed to open file
+        return;
       }
-
-      if (!file_.is_open())
-      {
-        file_path_ = generate_filepath();
-        boost::filesystem::create_directories(file_path_.parent_path());
-        file_.open(file_path_);
-        if (!file_.is_open())
-        {
-          // failed to open file
-          return;
-        }
-        characters_written_ = static_cast<std::streamoff>(file_.tellp());
-      }
-      file_.write(
-          formatted_message.data(),
-          static_cast<std::streamsize>(formatted_message.size()));
-      file_.put('\n');
-      characters_written_ += formatted_message.size() + 1;
-
-      if (auto_flush_)
-      {
-        file_.flush();
-      }
+      characters_written_ = static_cast<std::streamoff>(file_.tellp());
     }
+    file_.write(
+        formatted_message.data(),
+        static_cast<std::streamsize>(formatted_message.size()));
+    file_.put('\n');
+    characters_written_ += formatted_message.size() + 1;
 
-  private:
-    void rotate_file()
-    {
-      file_.close();
-      file_.clear();
-      characters_written_ = 0;
+    if (auto_flush_)
+      file_.flush();
+  }
+
+ private:
+  void rotate_file() {
+    file_.close();
+    file_.clear();
+    characters_written_ = 0;
+  }
+
+  boost::filesystem::path generate_filepath() {
+    std::string filename_prefix = datetime_string_with_format("%Y-%m-%d");
+    std::string monthly_path_name = datetime_string_with_format("%Y-%m");
+
+    boost::filesystem::path monthly_path(target_path_ / monthly_path_name);
+    // e.g. 2014-08-12[1]_example.log
+    boost::regex pattern(
+        filename_prefix + "[\\[\\]0-9]*" + "_" + file_name_suffix_ + ".log");
+    uintmax_t next_index = scan_next_index(monthly_path, pattern);
+
+    std::stringstream filename_ss;
+    filename_ss << filename_prefix;
+    if (next_index > 0) {
+      filename_ss << "[" << next_index << "]";
     }
+    filename_ss << "_" + file_name_suffix_;
+    filename_ss << ".log";
 
-    boost::filesystem::path generate_filepath()
-    {
-      std::string filename_prefix = datetime_string_with_format("%Y-%m-%d");
-      std::string monthly_path_name = datetime_string_with_format("%Y-%m");
+    return boost::filesystem::path(monthly_path / filename_ss.str());
+  }
 
-      boost::filesystem::path monthly_path(target_path_ / monthly_path_name);
-      // e.g. 2014-08-12[1]_example.log
-      boost::regex pattern(
-          filename_prefix + "[\\[\\]0-9]*" + "_" + file_name_suffix_ + ".log");
-      uintmax_t next_index = scan_next_index(monthly_path, pattern);
+  std::string datetime_string_with_format(std::string const& format) {
+    std::locale loc(
+        std::cout.getloc(),
+        new boost::posix_time::time_facet(format.c_str()));
+    std::stringstream ss;
+    ss.imbue(loc);
+    ss << boost::posix_time::second_clock::universal_time();
+    return ss.str();
+  }
 
-      std::stringstream filename_ss;
-      filename_ss << filename_prefix;
-      if (next_index > 0)
-      {
-        filename_ss << "[" << next_index << "]";
-      }
-      filename_ss << "_" + file_name_suffix_;
-      filename_ss << ".log";
-
-      return boost::filesystem::path(monthly_path / filename_ss.str());
-    }
-
-    std::string datetime_string_with_format(std::string const& format)
-    {
-      std::locale loc(
-          std::cout.getloc(),
-          new boost::posix_time::time_facet(format.c_str()));
-      std::stringstream ss;
-      ss.imbue(loc);
-      ss << boost::posix_time::second_clock::universal_time();;
-      return ss.str();
-    }
-
-    uintmax_t scan_next_index(
-        boost::filesystem::path const& path,
-        boost::regex const& pattern)
-    {
-      uintmax_t next_index = 0;
-      if (boost::filesystem::exists(path) &&
-          boost::filesystem::is_directory(path))
-      {
-        boost::filesystem::directory_iterator it(path), end;
-        for (; it != end; ++it)
-        {
-          if (boost::regex_match(it->path().filename().string(), pattern))
-          {
-            uintmax_t index = parse_index(it->path().filename().string());
-            if (index >= next_index)
-            {
-              next_index = index + 1;
-            }
+  uintmax_t scan_next_index(
+      boost::filesystem::path const& path,
+      boost::regex const& pattern) {
+    uintmax_t next_index = 0;
+    if (boost::filesystem::exists(path) &&
+        boost::filesystem::is_directory(path)) {
+      boost::filesystem::directory_iterator it(path), end;
+      for (; it != end; ++it) {
+        if (boost::regex_match(it->path().filename().string(), pattern)) {
+          uintmax_t index = parse_index(it->path().filename().string());
+          if (index >= next_index) {
+            next_index = index + 1;
           }
         }
       }
-      return next_index;
     }
+    return next_index;
+  }
 
-    uintmax_t parse_index(std::string const& filename)
-    {
-      size_t pos_index_begin = filename.find('[');
-      size_t pos_index_end = filename.find(']');
-      unsigned int index = 0;
-      if (pos_index_begin != std::string::npos &&
-          pos_index_end != std::string::npos)
-      {
-        index = atoi(filename.substr(pos_index_begin + 1,
-                     pos_index_end - pos_index_begin).c_str());
-      }
-      return index;
+  uintmax_t parse_index(std::string const& filename) {
+    size_t pos_index_begin = filename.find('[');
+    size_t pos_index_end = filename.find(']');
+    unsigned int index = 0;
+    if (pos_index_begin != std::string::npos &&
+        pos_index_end != std::string::npos) {
+      index = atoi(filename.substr(pos_index_begin + 1,
+                                   pos_index_end - pos_index_begin).c_str());
     }
+    return index;
+  }
 };
 
-namespace castis
-{
-  namespace logger
-  {
-    typedef boost::log::sinks::synchronous_sink<cilog_backend> cilog_sync_sink_t;
-    typedef boost::log::sinks::asynchronous_sink<cilog_backend> cilog_async_sink_t;
+namespace castis {
+  namespace logger {
+    typedef boost::log::sinks::synchronous_sink<cilog_backend>
+        cilog_sync_sink_t;
+    typedef boost::log::sinks::asynchronous_sink<cilog_backend>
+        cilog_async_sink_t;
 
     inline void init_logger(
         const std::string& app_name,
         const std::string& app_version,
         const std::string& target = "./log",
-        unsigned long long rotation_size = 100 * 100 * 1024,
-        bool auto_flush = true)
-    {
+        int64_t rotation_size = 100 * 100 * 1024,
+        bool auto_flush = true) {
       namespace expr = boost::log::expressions;
       boost::log::add_common_attributes();
       boost::shared_ptr<cilog_backend> backend(
           new cilog_backend(
-          boost::filesystem::path(target),
-          app_name,
-          rotation_size,
-          auto_flush));
+              boost::filesystem::path(target),
+              app_name,
+              rotation_size,
+              auto_flush));
 
       boost::shared_ptr<cilog_sync_sink_t> sink(new cilog_sync_sink_t(backend));
       sink->set_formatter(
@@ -247,8 +224,8 @@ namespace castis
           << "," << app_version
           << ","
           << expr::format_date_time<boost::posix_time::ptime>(
-            "TimeStamp",
-            "%Y-%m-%d,%H:%M:%S.%f")
+              "TimeStamp",
+              "%Y-%m-%d,%H:%M:%S.%f")
           << "," << expr::attr<severity_level, severity_tag>("Severity")
           << "," << expr::smessage);
       boost::log::core::get()->add_sink(sink);
@@ -258,27 +235,27 @@ namespace castis
         const std::string& app_name,
         const std::string& app_version,
         const std::string& target = "./log",
-        unsigned long long rotation_size = 100 * 100 * 1024,
-        bool auto_flush = true)
-    {
+        int64_t rotation_size = 100 * 100 * 1024,
+        bool auto_flush = true) {
       namespace expr = boost::log::expressions;
       boost::log::add_common_attributes();
       boost::shared_ptr<cilog_backend> backend(
           new cilog_backend(
-          boost::filesystem::path(target),
-          app_name,
-          rotation_size,
-          auto_flush));
+              boost::filesystem::path(target),
+              app_name,
+              rotation_size,
+              auto_flush));
 
-      boost::shared_ptr<cilog_async_sink_t> sink(new cilog_async_sink_t(backend));
+      boost::shared_ptr<cilog_async_sink_t> sink(
+          new cilog_async_sink_t(backend));
       sink->set_formatter(
           expr::stream
           << app_name
           << "," << app_version
           << ","
           << expr::format_date_time<boost::posix_time::ptime>(
-            "TimeStamp",
-            "%Y-%m-%d,%H:%M:%S.%f")
+              "TimeStamp",
+              "%Y-%m-%d,%H:%M:%S.%f")
           << "," << expr::attr<severity_level, severity_tag>("Severity")
           << "," << expr::smessage);
       boost::log::core::get()->add_sink(sink);
@@ -286,8 +263,7 @@ namespace castis
       return sink;
     }
 
-    inline void stop_logger(boost::shared_ptr<cilog_async_sink_t>& sink)
-    {
+    inline void stop_logger(boost::shared_ptr<cilog_async_sink_t>& sink) {
       boost::shared_ptr<boost::log::core> core = boost::log::core::get();
       core->remove_sink(sink);
       sink->stop();
@@ -295,31 +271,25 @@ namespace castis
       sink.reset();
     }
 
-    inline boost::format formatter_r(boost::format& format)
-    {
+    inline boost::format formatter_r(boost::format& format) {
       return format;
     }
 
-    template <typename T, typename... Params>
-      inline boost::format formatter_r(boost::format& format, T arg, Params... parameters)
-      {
-        return formatter_r(format % arg, parameters...);
-      }
+    template <typename T, typename... Params> inline boost::format formatter_r(
+        boost::format& format, T arg, Params... parameters) {
+          return formatter_r(format % arg, parameters...);
+        }
 
-    inline boost::format formatter(const char* const format)
-    {
+    inline boost::format formatter(const char* const format) {
       return boost::format(format);
     }
 
-    template <typename T, typename... Params>
-      inline boost::format formatter(const char* const format, T arg, Params... parameters)
-      {
-        return formatter_r(boost::format(format) % arg, parameters...);
-      }
+    template <typename T, typename... Params> inline boost::format formatter(
+        const char* const format, T arg, Params... parameters) {
+          return formatter_r(boost::format(format) % arg, parameters...);
+        }
   }
 }
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(
-    my_logger,
-    boost::log::sources::severity_logger_mt<severity_level>)
-
+    my_logger, boost::log::sources::severity_logger_mt<severity_level>)
