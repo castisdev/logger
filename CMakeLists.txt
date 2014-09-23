@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-set(PROJECT_NAME example)
+set(PROJECT_NAME awsome_example)
 project(${PROJECT_NAME})
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.56 COMPONENTS log log_setup thread filesystem system regex date_time chrono REQUIRED)
