@@ -26,15 +26,11 @@ endif(WIN32)
 
 file(GLOB SRCS_TEST "unittest/*.cpp" "unittest/*.h")
 add_executable(unittest ${SRCS_TEST})
-set_target_properties(
-  unittest 
-  PROPERTIES COMPILE_FLAGS "-fprofile-arcs -ftest-coverage -std=gnu++11"
-)
 if(WIN32)
   target_link_libraries(unittest ${Boost_LIBRARIES})
 else(WIN32)
   add_definitions(-Wall -g)
-  set_target_properties(unittest PROPERTIES COMPILE_FLAGS "-std=c++11")
+  set_target_properties(unittest PROPERTIES COMPILE_FLAGS "--coverage -std=c++11")
   target_link_libraries(
     unittest
     ${Boost_LIBRARIES}
