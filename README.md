@@ -8,7 +8,7 @@
 * severity levels
 * file rotation (size 기반, default = 10MB)
 * auto flushing on/off
-* iostream 과 printf 스타일을 모두 사용 가능
+* iostream 과 printf 스타일을 모두 지원
 * asyncronous logging
 
 ## Basic Example
