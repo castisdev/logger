@@ -1,9 +1,10 @@
 # Castis Logger
 
-[Boost.log](http://www.boost.org/doc/libs/1_55_0b1/libs/log/doc/html/index.html)를 이용하면서 기존 CiLogger와 동일한 포멧으로 log를 남길 수 있도록 도와주는 header-only 라이브러리
+[Boost.log](http://www.boost.org/doc/libs/1_55_0b1/libs/log/doc/html/index.html)기반의 CiLogger 포멧 logging 라이브러리
 
 ## Features
 
+* header-only
 * severity levels
 * file rotation (size 기반, default = 10MB)
 * auto flushing on/off
