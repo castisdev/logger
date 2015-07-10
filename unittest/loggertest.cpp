@@ -9,7 +9,7 @@ std::string datetime_string_with_format(std::string const& format) {
       new boost::posix_time::time_facet(format.c_str()));
   std::stringstream ss;
   ss.imbue(loc);
-  ss << boost::posix_time::second_clock::universal_time();
+  ss << boost::posix_time::second_clock::local_time();
   return ss.str();
 }
 

@@ -81,6 +81,7 @@ class cilog_backend
   std::string file_name_suffix_;
   uintmax_t rotation_size_;
   uintmax_t characters_written_;
+  boost::gregorian::date current_date_;
 
  public:
   explicit cilog_backend(
@@ -92,23 +93,17 @@ class cilog_backend
       target_path_(target_path),
       file_name_suffix_(file_name_suffix),
       rotation_size_(rotation_size),
-      characters_written_(0) {
+      characters_written_(0),
+      current_date_(boost::gregorian::day_clock::local_day()){
   }
 
   void consume(
       boost::log::record_view const& /*rec*/,
       string_type const& formatted_message) {
-    if ((file_.is_open() &&
-         (characters_written_ + formatted_message.size() >= rotation_size_))
-        ||
-        (!file_.good())) {
-      rotate_file();
-    }
-
     if (!file_.is_open()) {
       file_path_ = generate_filepath();
       boost::filesystem::create_directories(file_path_.parent_path());
-      file_.open(file_path_);
+      file_.open(file_path_, std::ofstream::out | std::ofstream::app);
       if (!file_.is_open()) {
         // failed to open file
         return;
@@ -123,6 +118,12 @@ class cilog_backend
 
     if (auto_flush_)
       file_.flush();
+
+    if ((file_.is_open() && (characters_written_ >= rotation_size_)) ||
+        (!file_.good()) ||
+        current_date_ != boost::gregorian::day_clock::local_day()) {
+      rotate_file();
+    }
   }
 
  private:
@@ -130,6 +131,7 @@ class cilog_backend
     file_.close();
     file_.clear();
     characters_written_ = 0;
+    current_date_ = boost::gregorian::day_clock::local_day();
   }
 
   boost::filesystem::path generate_filepath() {
@@ -159,27 +161,36 @@ class cilog_backend
         new boost::posix_time::time_facet(format.c_str()));
     std::stringstream ss;
     ss.imbue(loc);
-    ss << boost::posix_time::second_clock::universal_time();
+    ss << boost::posix_time::second_clock::local_time();
     return ss.str();
   }
 
   uintmax_t scan_next_index(
       boost::filesystem::path const& path,
       boost::regex const& pattern) {
-    uintmax_t next_index = 0;
+    uintmax_t current_index = 0;
+    boost::filesystem::path current_fs;
     if (boost::filesystem::exists(path) &&
         boost::filesystem::is_directory(path)) {
       boost::filesystem::directory_iterator it(path), end;
       for (; it != end; ++it) {
         if (boost::regex_match(it->path().filename().string(), pattern)) {
           uintmax_t index = parse_index(it->path().filename().string());
-          if (index >= next_index) {
-            next_index = index + 1;
+          if (index >= current_index) {
+            current_index = index;
+            current_fs = it->path();
           }
         }
       }
     }
-    return next_index;
+    boost::system::error_code ec;
+    uintmax_t filesize = boost::filesystem::file_size(current_fs, ec);
+    if (!ec) {
+      if (filesize >= rotation_size_) {
+        ++current_index;
+      }
+    }
+    return current_index;
   }
 
   uintmax_t parse_index(std::string const& filename) {
