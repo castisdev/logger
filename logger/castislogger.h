@@ -100,6 +100,10 @@ class cilog_backend
   void consume(
       boost::log::record_view const& /*rec*/,
       string_type const& formatted_message) {
+    if (current_date_ != boost::gregorian::day_clock::local_day()) {
+      rotate_file();
+    }
+
     if (!file_.is_open()) {
       file_path_ = generate_filepath();
       boost::filesystem::create_directories(file_path_.parent_path());
@@ -120,8 +124,7 @@ class cilog_backend
       file_.flush();
 
     if ((file_.is_open() && (characters_written_ >= rotation_size_)) ||
-        (!file_.good()) ||
-        current_date_ != boost::gregorian::day_clock::local_day()) {
+        (!file_.good())) {
       rotate_file();
     }
   }
