@@ -144,7 +144,7 @@ class cilog_backend
     boost::filesystem::path monthly_path(target_path_ / monthly_path_name);
     // e.g. 2014-08-12[1]_example.log
     boost::regex pattern(
-        filename_prefix + "[\\[\\]0-9]*" + "_" + file_name_suffix_ + ".log");
+        filename_prefix + "(\\[[0-9]+\\])?" + "_" + file_name_suffix_ + ".log");
     uintmax_t next_index = scan_next_index(monthly_path, pattern);
 
     std::stringstream filename_ss;
