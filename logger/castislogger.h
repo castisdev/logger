@@ -70,6 +70,102 @@ inline boost::log::formatting_ostream& operator<< (
   return strm;
 }
 
+class cilog_date_hour_backend
+: public boost::log::sinks::basic_formatted_sink_backend<
+    char, boost::log::sinks::synchronized_feeding> {
+ private:
+  bool auto_flush_;
+  boost::filesystem::ofstream file_;
+  boost::filesystem::path target_path_;
+  boost::filesystem::path file_path_;
+  std::string file_name_suffix_;
+  std::string current_date_hour_;
+  std::string file_name_prefix_format_;
+
+ public:
+  explicit cilog_date_hour_backend(
+      boost::filesystem::path const& target_path,
+      std::string const& file_name_suffix,
+      std::string const& file_name_prefix_format, 
+      bool auto_flush)
+      : 
+      target_path_(target_path),
+      file_name_suffix_(file_name_suffix),
+      file_name_prefix_format_(file_name_prefix_format),
+      auto_flush_(auto_flush),
+      current_date_hour_(get_current_date_hour()){
+  }
+
+  void consume(
+      boost::log::record_view const& /*rec*/,
+      string_type const& formatted_message) {
+
+    if (current_date_hour_ != get_current_date_hour()) {
+      rotate_file();
+    }
+
+    if (!file_.is_open()) {
+      file_path_ = generate_filepath();
+      boost::filesystem::create_directories(file_path_.parent_path());
+      file_.open(file_path_, std::ofstream::out | std::ofstream::app);
+      if (!file_.is_open()) {
+        // failed to open file
+        return;
+      }
+    }
+    file_.write(
+        formatted_message.data(),
+        static_cast<std::streamsize>(formatted_message.size()));
+    file_.put('\n');
+
+    if (auto_flush_)
+      file_.flush();
+
+    if ((file_.is_open() && (current_date_hour_ != get_current_date_hour())) ||
+        (!file_.good())) {
+      rotate_file();
+    }
+  }
+
+private:
+  void rotate_file() {
+    file_.close();
+    file_.clear();
+    current_date_hour_ = get_current_date_hour();
+  }
+
+  boost::filesystem::path generate_filepath() {
+    if (file_name_prefix_format_.empty()) file_name_prefix_format_ = "%Y-%m-%d[%H]";
+    std::string filename_prefix = datetime_string_with_format(file_name_prefix_format_);
+    std::string monthly_path_name = datetime_string_with_format("%Y-%m");
+
+    boost::filesystem::path monthly_path(target_path_ / monthly_path_name);
+
+    // e.g. 2014-08-12[1]_example.log
+    std::stringstream filename_ss;
+    filename_ss << filename_prefix;
+    filename_ss << "_" + file_name_suffix_;
+    filename_ss << ".log";
+
+    return boost::filesystem::path(monthly_path / filename_ss.str());
+  }
+
+  std::string datetime_string_with_format(std::string const& format) {
+    std::locale loc(
+        std::cout.getloc(),
+        new boost::posix_time::time_facet(format.c_str()));
+    std::stringstream ss;
+    ss.imbue(loc);
+    ss << boost::posix_time::second_clock::local_time();
+    return ss.str();
+  }
+  std::string get_current_date_hour() {
+    return datetime_string_with_format("%Y-%m-%d %H");
+  }
+
+};
+
+
 class cilog_backend
 : public boost::log::sinks::basic_formatted_sink_backend<
     char, boost::log::sinks::synchronized_feeding> {
@@ -215,6 +311,8 @@ namespace castis {
         cilog_sync_sink_t;
     typedef boost::log::sinks::asynchronous_sink<cilog_backend>
         cilog_async_sink_t;
+    typedef boost::log::sinks::asynchronous_sink<cilog_date_hour_backend>
+        cilog_date_hour_async_sink_t;
 
     inline void init_logger(
         const std::string& app_name,
@@ -242,8 +340,11 @@ namespace castis {
               "%Y-%m-%d,%H:%M:%S.%f")
           << "," << expr::attr<severity_level, severity_tag>("Severity")
           << "," << expr::smessage);
+
+      sink->set_filter(expr::has_attr<std::string>("Channel") == false);
+      
       boost::log::core::get()->add_sink(sink);
-    }
+      }
 
     inline boost::shared_ptr<cilog_async_sink_t> init_async_logger(
         const std::string& app_name,
@@ -272,12 +373,58 @@ namespace castis {
               "%Y-%m-%d,%H:%M:%S.%f")
           << "," << expr::attr<severity_level, severity_tag>("Severity")
           << "," << expr::smessage);
+
+      sink->set_filter(expr::has_attr<std::string>("Channel") == false);
+
       boost::log::core::get()->add_sink(sink);
 
       return sink;
     }
 
     inline void stop_logger(boost::shared_ptr<cilog_async_sink_t>& sink) {
+      boost::shared_ptr<boost::log::core> core = boost::log::core::get();
+      core->remove_sink(sink);
+      sink->stop();
+      sink->flush();
+      sink.reset();
+    }
+
+    inline boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
+        const std::string& app_name,
+        const std::string& app_version,
+        const std::string& target = "./log",
+        const std::string& file_name_prefix_format="%Y-%m-%d[%H]",
+        bool auto_flush = true) {
+      namespace expr = boost::log::expressions;
+      boost::log::add_common_attributes();
+      boost::shared_ptr<cilog_date_hour_backend> backend(
+          new cilog_date_hour_backend(
+              boost::filesystem::path(target),
+              app_name,
+              file_name_prefix_format,
+              auto_flush));
+
+      boost::shared_ptr<cilog_date_hour_async_sink_t> sink(
+          new cilog_date_hour_async_sink_t(backend));
+      sink->set_formatter(
+          expr::stream
+          << app_name
+          << "," << app_version
+          << ","
+          << expr::format_date_time<boost::posix_time::ptime>(
+              "TimeStamp",
+              "%Y-%m-%d,%H:%M:%S.%f")
+          << "," << expr::attr<severity_level, severity_tag>("Severity")
+          << "," << expr::smessage);
+
+      sink->set_filter(expr::has_attr<std::string>("Channel") == false);
+
+      boost::log::core::get()->add_sink(sink);
+
+      return sink;
+    }
+
+    inline void stop_logger(boost::shared_ptr<cilog_date_hour_async_sink_t>& sink) {
       boost::shared_ptr<boost::log::core> core = boost::log::core::get();
       core->remove_sink(sink);
       sink->stop();
@@ -306,4 +453,5 @@ namespace castis {
 }
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(
-    my_logger, boost::log::sources::severity_logger_mt<severity_level>)
+     my_logger, boost::log::sources::severity_logger_mt<severity_level>)
+
