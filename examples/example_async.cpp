@@ -2,7 +2,10 @@
 
 int main() {
   auto sink = castis::logger::init_async_logger("example", "1.0.0");
-
+  auto sink_hour = castis::logger::init_async_date_hour_logger("example_hour", "1.0.0");
+  auto sink_hour_level_sink = castis::logger::init_async_date_hour_level_logger(
+    "example", "1.0.0", {error, exception}, "error_exception");
+  
   // support severity levels
   CILOG(foo) << "Just a foo";
   CILOG(debug) << "A normal severity message";
@@ -26,6 +29,8 @@ int main() {
   }
 
   castis::logger::stop_logger(sink);
+  castis::logger::stop_logger(sink_hour);
+  castis::logger::stop_logger(sink_hour_level_sink);
 
   return 0;
 }
