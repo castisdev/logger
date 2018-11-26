@@ -15,9 +15,11 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/phoenix/bind/bind_function.hpp>
 #include <cstddef>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #define CILOG(severity)\
   BOOST_LOG_SEV(my_logger::get(), severity)\
@@ -40,7 +42,7 @@ enum severity_level {
   error,
   fail,
   exception,
-  critical
+  critical,
 };
 
 struct severity_tag;
@@ -79,9 +81,9 @@ class cilog_date_hour_backend
   boost::filesystem::path target_path_;
   boost::filesystem::path file_path_;
   std::string file_name_suffix_;
-  std::string current_date_hour_;
   std::string file_name_prefix_format_;
-
+  std::string current_date_hour_;
+  
  public:
   explicit cilog_date_hour_backend(
       boost::filesystem::path const& target_path,
@@ -89,10 +91,10 @@ class cilog_date_hour_backend
       std::string const& file_name_prefix_format, 
       bool auto_flush)
       : 
+      auto_flush_(auto_flush),
       target_path_(target_path),
       file_name_suffix_(file_name_suffix),
       file_name_prefix_format_(file_name_prefix_format),
-      auto_flush_(auto_flush),
       current_date_hour_(get_current_date_hour()){
   }
 
@@ -419,6 +421,95 @@ namespace castis {
 
       sink->set_filter(expr::has_attr<std::string>("Channel") == false);
 
+      boost::log::core::get()->add_sink(sink);
+
+      return sink;
+    }
+
+inline bool func_severity_filter(boost::log::value_ref<severity_level> const& level, const std::vector<severity_level>& severity_levels) {
+  for (auto seveirty_level : severity_levels ) {
+    if (level == seveirty_level) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
+        const std::string& app_name,
+        const std::string& app_version,
+        const std::vector<severity_level> severity_levels,
+        const std::string& file_name_suffix,
+        const std::string& target = "./log",
+        int64_t rotation_size = 100 * 100 * 1024,
+        bool auto_flush = true) {
+      namespace expr = boost::log::expressions;
+      boost::log::add_common_attributes();
+      boost::shared_ptr<cilog_backend> backend(
+          new cilog_backend(
+              boost::filesystem::path(target),
+              file_name_suffix,
+              rotation_size,
+              auto_flush));
+
+      boost::shared_ptr<cilog_async_sink_t> sink(
+          new cilog_async_sink_t(backend));
+      sink->set_formatter(
+          expr::stream
+          << app_name
+          << "," << app_version
+          << ","
+          << expr::format_date_time<boost::posix_time::ptime>(
+              "TimeStamp",
+              "%Y-%m-%d,%H:%M:%S.%f")
+          << "," << expr::attr<severity_level, severity_tag>("Severity")
+          << "," << expr::smessage);
+
+      sink->set_filter(
+        expr::has_attr<std::string>("Channel") == false &&
+        boost::phoenix::bind(&func_severity_filter, expr::attr<severity_level>("Severity"), severity_levels)
+        );
+        
+      boost::log::core::get()->add_sink(sink);
+
+      return sink;
+    }
+
+inline boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_level_logger(
+        const std::string& app_name,
+        const std::string& app_version,
+        const std::vector<severity_level> severity_levels,
+        const std::string& file_name_suffix,
+        const std::string& target = "./log",
+        const std::string& file_name_prefix_format="%Y-%m-%d[%H]",
+        bool auto_flush = true) {
+      namespace expr = boost::log::expressions;
+      boost::log::add_common_attributes();
+      boost::shared_ptr<cilog_date_hour_backend> backend(
+          new cilog_date_hour_backend(
+              boost::filesystem::path(target),
+              file_name_suffix,
+              file_name_prefix_format,
+              auto_flush));
+
+      boost::shared_ptr<cilog_date_hour_async_sink_t> sink(
+          new cilog_date_hour_async_sink_t(backend));
+      sink->set_formatter(
+          expr::stream
+          << app_name
+          << "," << app_version
+          << ","
+          << expr::format_date_time<boost::posix_time::ptime>(
+              "TimeStamp",
+              "%Y-%m-%d,%H:%M:%S.%f")
+          << "," << expr::attr<severity_level, severity_tag>("Severity")
+          << "," << expr::smessage);
+
+      sink->set_filter(
+        expr::has_attr<std::string>("Channel") == false &&
+        boost::phoenix::bind(&func_severity_filter, expr::attr<severity_level>("Severity"), severity_levels)
+        );
+      
       boost::log::core::get()->add_sink(sink);
 
       return sink;
