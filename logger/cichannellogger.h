@@ -1,9 +1,9 @@
 #pragma once
-#include <boost/log/sources/severity_channel_logger.hpp>
+#include <boost/log/attributes/named_scope.hpp>
 #include <boost/log/expressions/formatters/csv_decorator.hpp>
 #include <boost/log/expressions/formatters/named_scope.hpp>
-#include <boost/log/attributes/named_scope.hpp>
-#include "boost/date_time/posix_time/posix_time.hpp" 
+#include <boost/log/sources/severity_channel_logger.hpp>
+#include "boost/date_time/posix_time/posix_time.hpp"
 #include "castislogger.h"
 
 // cichannellogger.h
@@ -11,36 +11,32 @@
 // almost logic come from castislogger.h
 //
 
-BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(
-    ChanelLogger,
-    boost::log::sources::severity_channel_logger_mt<severity_level>)
+#define CILOG_CHANNEL(channel_name, severity) \
+  BOOST_LOG_FUNCTION()                        \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), channel_name, severity)
 
-#define CILOG_CHANNEL(channel_name, severity)                                      \
-  BOOST_LOG_FUNCTION() \
+#define CILOGF_CHANNEL(channel_name, severity, format, ...)          \
+  BOOST_LOG_FUNCTION()                                               \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), channel_name, severity) \
-
-#define CILOGF_CHANNEL(channel_name, severity, format, ...)                        \
-  BOOST_LOG_FUNCTION() \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), channel_name, severity) \
-  << castis::logger::formatter(format, ##__VA_ARGS__)
+      << castis::logger::formatter(format, ##__VA_ARGS__)
 
 // cilog_size_based_backup_backend :
 //
 // almost logics come from cilog_backend
 //
 // log file name example:
-// active log file : 
+// active log file :
 // example.log
-// backup log file : 
+// backup log file :
 // 2018-10/2018-10-12[0]_example.log
 // 2018-10/2018-10-12[1]_example.log
 //
-// WARN : crash when log path set to current directory {"."}. 
+// WARN : crash when log path set to current directory {"."}.
 // fiexed : Fix #12495 BOOST-1.68.0
 
 class cilog_date_hour_based_backup_backend
     : public boost::log::sinks::basic_formatted_sink_backend<
-    char, boost::log::sinks::synchronized_feeding> {
+          char, boost::log::sinks::synchronized_feeding> {
  private:
   bool auto_flush_;
   boost::filesystem::ofstream file_;
@@ -54,20 +50,15 @@ class cilog_date_hour_based_backup_backend
   explicit cilog_date_hour_based_backup_backend(
       boost::filesystem::path const& target_path,
       std::string const& file_name_suffix,
-      std::string const& file_name_prefix_format, 
-      bool auto_flush)
-      : 
-      target_path_(target_path),
-      file_name_suffix_(file_name_suffix),
-      file_name_prefix_format_(file_name_prefix_format),
-      auto_flush_(auto_flush),
-      current_date_hour_(get_current_date_hour()){
-  }
+      std::string const& file_name_prefix_format, bool auto_flush)
+      : auto_flush_(auto_flush),
+        target_path_(target_path),
+        file_name_suffix_(file_name_suffix),
+        current_date_hour_(get_current_date_hour()),
+        file_name_prefix_format_(file_name_prefix_format) {}
 
-  void consume(
-      boost::log::record_view const& /*rec*/,
-      std::basic_string<char> const& formatted_message) {
-
+  void consume(boost::log::record_view const& /*rec*/,
+               std::basic_string<char> const& formatted_message) {
     if (current_date_hour_ != get_current_date_hour()) {
       file_path_ = generate_active_filepath();
       rotate_file();
@@ -82,9 +73,8 @@ class cilog_date_hour_based_backup_backend
         return;
       }
     }
-    file_.write(
-        formatted_message.data(),
-        static_cast<std::streamsize>(formatted_message.size()));
+    file_.write(formatted_message.data(),
+                static_cast<std::streamsize>(formatted_message.size()));
     file_.put('\n');
 
     if (auto_flush_) file_.flush();
@@ -94,7 +84,7 @@ class cilog_date_hour_based_backup_backend
     }
   }
 
-private:
+ private:
   void rotate_file() {
     if (file_.is_open()) {
       file_.close();
@@ -103,7 +93,7 @@ private:
     rollover_without_max();
     current_date_hour_ = get_current_date_hour();
   }
-  
+
   boost::filesystem::path generate_active_filepath() {
     // e.g. example.log
     std::stringstream filename_ss;
@@ -112,19 +102,21 @@ private:
 
     return boost::filesystem::path(target_path_ / filename_ss.str());
   }
-  
-  void rollover_without_max() {
 
+  void rollover_without_max() {
     try {
-    boost::filesystem::path backup_file_path = generate_filepath();
-    boost::filesystem::create_directories(backup_file_path.parent_path());
-    boost::filesystem::rename(file_path_, backup_file_path);
-    } catch(boost::filesystem::filesystem_error& ) {}
+      boost::filesystem::path backup_file_path = generate_filepath();
+      boost::filesystem::create_directories(backup_file_path.parent_path());
+      boost::filesystem::rename(file_path_, backup_file_path);
+    } catch (boost::filesystem::filesystem_error&) {
+    }
   }
 
   boost::filesystem::path generate_filepath() {
-    if (file_name_prefix_format_.empty()) file_name_prefix_format_ = "%Y-%m-%d[%H]";
-    std::string filename_prefix = datetime_string_with_format(file_name_prefix_format_, -1);
+    if (file_name_prefix_format_.empty())
+      file_name_prefix_format_ = "%Y-%m-%d[%H]";
+    std::string filename_prefix =
+        datetime_string_with_format(file_name_prefix_format_, -1);
     std::string monthly_path_name = datetime_string_with_format("%Y-%m", -1);
 
     boost::filesystem::path monthly_path(target_path_ / monthly_path_name);
@@ -139,24 +131,23 @@ private:
   }
 
   std::string datetime_string_with_format(std::string const& format, int hour) {
-    std::locale loc(
-        std::cout.getloc(),
-        new boost::posix_time::time_facet(format.c_str()));
+    std::locale loc(std::cout.getloc(),
+                    new boost::posix_time::time_facet(format.c_str()));
     std::stringstream ss;
     ss.imbue(loc);
-    ss << boost::posix_time::second_clock::local_time() + boost::posix_time::hours(hour);
+    ss << boost::posix_time::second_clock::local_time() +
+              boost::posix_time::hours(hour);
 
     return ss.str();
   }
   std::string get_current_date_hour() {
     return datetime_string_with_format("%Y-%m-%d %H", 0);
   }
-
 };
 
 class cilog_size_based_backup_backend
     : public boost::log::sinks::basic_formatted_sink_backend<
-    char, boost::log::sinks::synchronized_feeding> {
+          char, boost::log::sinks::synchronized_feeding> {
  private:
   bool auto_flush_;
   boost::filesystem::ofstream file_;
@@ -231,10 +222,11 @@ class cilog_size_based_backup_backend
 
   void rollover_without_max() {
     try {
-    boost::filesystem::path backup_file_path = generate_filepath();
-    boost::filesystem::create_directories(backup_file_path.parent_path());
-    boost::filesystem::rename(file_path_, backup_file_path);
-    } catch(boost::filesystem::filesystem_error&) {}
+      boost::filesystem::path backup_file_path = generate_filepath();
+      boost::filesystem::create_directories(backup_file_path.parent_path());
+      boost::filesystem::rename(file_path_, backup_file_path);
+    } catch (boost::filesystem::filesystem_error&) {
+    }
   }
 
   boost::filesystem::path generate_filepath() {
@@ -311,286 +303,243 @@ namespace logger {
 
 typedef boost::log::sinks::asynchronous_sink<cilog_size_based_backup_backend>
     cichannellog_async_sink;
-typedef boost::log::sinks::asynchronous_sink<cilog_date_hour_based_backup_backend>
-    cichannellog_date_hour_async_sink;    
+typedef boost::log::sinks::asynchronous_sink<
+    cilog_date_hour_based_backup_backend>
+    cichannellog_date_hour_async_sink;
 
-inline boost::shared_ptr<cichannellog_async_sink>
-init_async_channel_logger(const std::string& app_name,
-                         const std::string& app_version,
-                         const std::string& channel_name, 
-                         const std::string& target = "./log",
-                         int64_t rotation_size = 100 * 100 * 1024,
-                         bool with_func_scope = false, 
-                         bool csv_format = true,
-                         bool auto_flush = true) {
+inline boost::shared_ptr<cichannellog_async_sink> init_async_channel_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::string& channel_name, const std::string& target = "./log",
+    int64_t rotation_size = 100 * 100 * 1024, bool with_func_scope = false,
+    bool csv_format = true, bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   boost::shared_ptr<cilog_size_based_backup_backend> backend(
-      new cilog_size_based_backup_backend(
-          boost::filesystem::path(target), app_name, rotation_size,
-          auto_flush));
+      new cilog_size_based_backup_backend(boost::filesystem::path(target),
+                                          app_name, rotation_size, auto_flush));
 
   boost::shared_ptr<cichannellog_async_sink> sink(
       new cichannellog_async_sink(backend));
 
-  std::string fs="%F::%C:%l";
-  if (with_func_scope) fs="%F::%c:%l";
+  std::string fs = "%F::%C:%l";
+  if (with_func_scope) fs = "%F::%c:%l";
   if (csv_format) {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << "," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                    )]
-                        << "\"" 
-                        << ",," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::smessage  ]
-                        << "\"" 
-                        );
+    sink->set_formatter(
+        expr::stream
+        << app_name << "," << app_version << ","
+        << expr::format_date_time<boost::posix_time::ptime>(
+               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+        << "," << expr::attr<severity_level, severity_tag>("Severity") << ","
+        << "\""
+        << expr::csv_decor[expr::stream << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")]
+        << "\""
+        << ",,"
+        << "\"" << expr::csv_decor[expr::stream << expr::smessage] << "\"");
   } else {
     sink->set_formatter(expr::stream
                         << app_name << "," << app_version << ","
                         << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
                         << ","
                         << expr::attr<severity_level, severity_tag>("Severity")
                         << ","
-                        << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                   )
-                        << ",," << expr::smessage 
-                        );
+                        << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")
+                        << ",," << expr::smessage);
   }
 
   sink->set_filter(expr::attr<std::string>("Channel") == channel_name);
 
-  boost::log::core::get()->add_global_attribute("Scopes", boost::log::attributes::named_scope());
-  boost::log::core::get()->add_sink(sink);
-  return sink;
-}
-
-inline void stop_logger(boost::shared_ptr<cichannellog_async_sink>& async_sink) {
-  boost::shared_ptr<boost::log::core> core = boost::log::core::get();
-  core->remove_sink(async_sink);
-  async_sink->stop();
-  async_sink->flush();
-  async_sink.reset();
-}
-
-inline boost::shared_ptr<cichannellog_date_hour_async_sink>
-init_async_date_hour_channel_logger(const std::string& app_name,
-                         const std::string& app_version,
-                         const std::string& channel_name, 
-                         const std::string& target = "./log",
-                         const std::string& file_name_prefix_format="%Y-%m-%d[%H]",
-                         bool with_func_scope = false, 
-                         bool csv_format = true,
-                         bool auto_flush = true) {
-  namespace expr = boost::log::expressions;
-  boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_date_hour_based_backup_backend> backend(
-      new cilog_date_hour_based_backup_backend(
-          boost::filesystem::path(target), app_name,file_name_prefix_format,  
-          auto_flush));
-
-  boost::shared_ptr<cichannellog_date_hour_async_sink> sink(
-      new cichannellog_date_hour_async_sink(backend));
-
-  std::string fs="%F::%C:%l";
-  if (with_func_scope) fs="%F::%c:%l";
-  if (csv_format) {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << "," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                    )]
-                        << "\"" 
-                        << ",," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::smessage  ]
-                        << "\"" 
-                        );
-  } else {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << ","
-                        << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                   )
-                        << ",," << expr::smessage 
-                        );
-  }
-
-  sink->set_filter(expr::attr<std::string>("Channel") == channel_name);
-
-  boost::log::core::get()->add_global_attribute("Scopes", boost::log::attributes::named_scope());
-  boost::log::core::get()->add_sink(sink);
-  return sink;
-}
-
-inline boost::shared_ptr<cichannellog_async_sink>
-init_async_channel_level_logger(const std::string& app_name,
-                         const std::string& app_version,
-                         const std::string& channel_name,
-                         const std::vector<severity_level> severity_levels,
-                         const std::string& file_name_suffix, 
-                         const std::string& target = "./log",
-                         int64_t rotation_size = 100 * 100 * 1024,
-                         bool with_func_scope = false, 
-                         bool csv_format = true,
-                         bool auto_flush = true) {
-  namespace expr = boost::log::expressions;
-  boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_size_based_backup_backend> backend(
-      new cilog_size_based_backup_backend(
-          boost::filesystem::path(target), file_name_suffix, rotation_size,
-          auto_flush));
-
-  boost::shared_ptr<cichannellog_async_sink> sink(
-      new cichannellog_async_sink(backend));
-
-  std::string fs="%F::%C:%l";
-  if (with_func_scope) fs="%F::%c:%l";
-  if (csv_format) {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << "," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                    )]
-                        << "\"" 
-                        << ",," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::smessage  ]
-                        << "\"" 
-                        );
-  } else {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << ","
-                        << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                   )
-                        << ",," << expr::smessage 
-                        );
-  }
-
-  sink->set_filter(
-    expr::attr<std::string>("Channel") == channel_name &&
-    boost::phoenix::bind(&func_severity_filter, expr::attr<severity_level>("Severity"), severity_levels)
-  );
-
-  boost::log::core::get()->add_global_attribute("Scopes", boost::log::attributes::named_scope());
+  boost::log::core::get()->add_global_attribute(
+      "Scopes", boost::log::attributes::named_scope());
   boost::log::core::get()->add_sink(sink);
   return sink;
 }
 
 inline boost::shared_ptr<cichannellog_date_hour_async_sink>
-init_async_date_hour_channel_level_logger(const std::string& app_name,
-                         const std::string& app_version,
-                         const std::string& channel_name, 
-                         const std::vector<severity_level> severity_levels,
-                         const std::string& file_name_suffix,
-                         const std::string& target = "./log",
-                         const std::string& file_name_prefix_format="%Y-%m-%d[%H]",
-                         bool with_func_scope = false, 
-                         bool csv_format = true,
-                         bool auto_flush = true) {
+init_async_date_hour_channel_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::string& channel_name, const std::string& target = "./log",
+    const std::string& file_name_prefix_format = "%Y-%m-%d[%H]",
+    bool with_func_scope = false, bool csv_format = true,
+    bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   boost::shared_ptr<cilog_date_hour_based_backup_backend> backend(
       new cilog_date_hour_based_backup_backend(
-          boost::filesystem::path(target), file_name_suffix, file_name_prefix_format,  
+          boost::filesystem::path(target), app_name, file_name_prefix_format,
           auto_flush));
 
   boost::shared_ptr<cichannellog_date_hour_async_sink> sink(
       new cichannellog_date_hour_async_sink(backend));
 
-  std::string fs="%F::%C:%l";
-  if (with_func_scope) fs="%F::%c:%l";
+  std::string fs = "%F::%C:%l";
+  if (with_func_scope) fs = "%F::%c:%l";
   if (csv_format) {
-    sink->set_formatter(expr::stream
-                        << app_name << "," << app_version << ","
-                        << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
-                        << ","
-                        << expr::attr<severity_level, severity_tag>("Severity")
-                        << "," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                    )]
-                        << "\"" 
-                        << ",," << "\"" 
-                        << expr::csv_decor[ expr::stream << expr::smessage  ]
-                        << "\"" 
-                        );
+    sink->set_formatter(
+        expr::stream
+        << app_name << "," << app_version << ","
+        << expr::format_date_time<boost::posix_time::ptime>(
+               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+        << "," << expr::attr<severity_level, severity_tag>("Severity") << ","
+        << "\""
+        << expr::csv_decor[expr::stream << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")]
+        << "\""
+        << ",,"
+        << "\"" << expr::csv_decor[expr::stream << expr::smessage] << "\"");
   } else {
     sink->set_formatter(expr::stream
                         << app_name << "," << app_version << ","
                         << expr::format_date_time<boost::posix_time::ptime>(
-                              "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
                         << ","
                         << expr::attr<severity_level, severity_tag>("Severity")
                         << ","
-                        << expr::format_named_scope("Scopes", 
-                                                    boost::log::keywords::format = fs,
-                                                    boost::log::keywords::depth = 1,
-                                                    boost::log::keywords::incomplete_marker=""
-                                                   )
-                        << ",," << expr::smessage 
-                        );
+                        << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")
+                        << ",," << expr::smessage);
   }
 
-  sink->set_filter(
-    expr::attr<std::string>("Channel") == channel_name &&
-    boost::phoenix::bind(&func_severity_filter, expr::attr<severity_level>("Severity"), severity_levels)
-  );
+  sink->set_filter(expr::attr<std::string>("Channel") == channel_name);
 
-  boost::log::core::get()->add_global_attribute("Scopes", boost::log::attributes::named_scope());
+  boost::log::core::get()->add_global_attribute(
+      "Scopes", boost::log::attributes::named_scope());
   boost::log::core::get()->add_sink(sink);
   return sink;
 }
 
-inline void stop_logger(boost::shared_ptr<cichannellog_date_hour_async_sink>& async_sink) {
-  boost::shared_ptr<boost::log::core> core = boost::log::core::get();
-  core->remove_sink(async_sink);
-  async_sink->stop();
-  async_sink->flush();
-  async_sink.reset();
+inline boost::shared_ptr<cichannellog_async_sink>
+init_async_channel_level_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::string& channel_name,
+    const std::vector<severity_level> severity_levels,
+    const std::string& file_name_suffix, const std::string& target = "./log",
+    int64_t rotation_size = 100 * 100 * 1024, bool with_func_scope = false,
+    bool csv_format = true, bool auto_flush = true) {
+  namespace expr = boost::log::expressions;
+  boost::log::add_common_attributes();
+  boost::shared_ptr<cilog_size_based_backup_backend> backend(
+      new cilog_size_based_backup_backend(boost::filesystem::path(target),
+                                          file_name_suffix, rotation_size,
+                                          auto_flush));
+
+  boost::shared_ptr<cichannellog_async_sink> sink(
+      new cichannellog_async_sink(backend));
+
+  std::string fs = "%F::%C:%l";
+  if (with_func_scope) fs = "%F::%c:%l";
+  if (csv_format) {
+    sink->set_formatter(
+        expr::stream
+        << app_name << "," << app_version << ","
+        << expr::format_date_time<boost::posix_time::ptime>(
+               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+        << "," << expr::attr<severity_level, severity_tag>("Severity") << ","
+        << "\""
+        << expr::csv_decor[expr::stream << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")]
+        << "\""
+        << ",,"
+        << "\"" << expr::csv_decor[expr::stream << expr::smessage] << "\"");
+  } else {
+    sink->set_formatter(expr::stream
+                        << app_name << "," << app_version << ","
+                        << expr::format_date_time<boost::posix_time::ptime>(
+                               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                        << ","
+                        << expr::attr<severity_level, severity_tag>("Severity")
+                        << ","
+                        << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")
+                        << ",," << expr::smessage);
+  }
+
+  sink->set_filter(expr::attr<std::string>("Channel") == channel_name &&
+                   boost::phoenix::bind(&func_severity_filter,
+                                        expr::attr<severity_level>("Severity"),
+                                        severity_levels));
+
+  boost::log::core::get()->add_global_attribute(
+      "Scopes", boost::log::attributes::named_scope());
+  boost::log::core::get()->add_sink(sink);
+  return sink;
 }
 
-} // logger 
-} // castis
+inline boost::shared_ptr<cichannellog_date_hour_async_sink>
+init_async_date_hour_channel_level_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::string& channel_name,
+    const std::vector<severity_level> severity_levels,
+    const std::string& file_name_suffix, const std::string& target = "./log",
+    const std::string& file_name_prefix_format = "%Y-%m-%d[%H]",
+    bool with_func_scope = false, bool csv_format = true,
+    bool auto_flush = true) {
+  namespace expr = boost::log::expressions;
+  boost::log::add_common_attributes();
+  boost::shared_ptr<cilog_date_hour_based_backup_backend> backend(
+      new cilog_date_hour_based_backup_backend(
+          boost::filesystem::path(target), file_name_suffix,
+          file_name_prefix_format, auto_flush));
+
+  boost::shared_ptr<cichannellog_date_hour_async_sink> sink(
+      new cichannellog_date_hour_async_sink(backend));
+
+  std::string fs = "%F::%C:%l";
+  if (with_func_scope) fs = "%F::%c:%l";
+  if (csv_format) {
+    sink->set_formatter(
+        expr::stream
+        << app_name << "," << app_version << ","
+        << expr::format_date_time<boost::posix_time::ptime>(
+               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+        << "," << expr::attr<severity_level, severity_tag>("Severity") << ","
+        << "\""
+        << expr::csv_decor[expr::stream << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")]
+        << "\""
+        << ",,"
+        << "\"" << expr::csv_decor[expr::stream << expr::smessage] << "\"");
+  } else {
+    sink->set_formatter(expr::stream
+                        << app_name << "," << app_version << ","
+                        << expr::format_date_time<boost::posix_time::ptime>(
+                               "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                        << ","
+                        << expr::attr<severity_level, severity_tag>("Severity")
+                        << ","
+                        << expr::format_named_scope(
+                               "Scopes", boost::log::keywords::format = fs,
+                               boost::log::keywords::depth = 1,
+                               boost::log::keywords::incomplete_marker = "")
+                        << ",," << expr::smessage);
+  }
+
+  sink->set_filter(expr::attr<std::string>("Channel") == channel_name &&
+                   boost::phoenix::bind(&func_severity_filter,
+                                        expr::attr<severity_level>("Severity"),
+                                        severity_levels));
+
+  boost::log::core::get()->add_global_attribute(
+      "Scopes", boost::log::attributes::named_scope());
+  boost::log::core::get()->add_sink(sink);
+  return sink;
+}
+
+}  // namespace logger
+}  // namespace castis

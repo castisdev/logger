@@ -19,7 +19,9 @@ int main() {
   CILOG(report) << "strings(" << "abc" << "), "
                 << "integers(" << 1 << "), "
                 << "float numbers(" << 3.14 << ")...";
-  CILOGF(report, "strings(%s), integers(%d), float numbers(%.2f)...",
+  CILOG(report, "strings(%s)...", "abc");
+  CILOG(report, "strings(%s), integers(%d)...", "abc", 1);
+  CILOG(report, "strings(%s), integers(%d), float numbers(%.2f)...",
                  "abc", 1, 3.14);
 
   for (int i = 0; i < 1000000; ++i) {
