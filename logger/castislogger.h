@@ -29,32 +29,34 @@
               CIMLOG_2, CIMLOG_3)                                     \
   (__VA_ARGS__)
 
-#define CIMLOG_2(module_name, severity)                                \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)   \
-      << boost::filesystem::path(__FILE__).filename().string()         \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << ","                \
-      << (std::strcmp(#module_name, CASTIS_CILOG_DEFAULT_MODULUE) == 0 \
-              ? ""                                                     \
-              : #module_name)                                          \
-      << ","
+#define CIMLOG_2(module_name, severity)                              \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity) \
+      << boost::filesystem::path(__FILE__).filename().string()       \
+      << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << ","
 
-#define CIMLOG_3(module_name, severity, format, ...)                   \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)   \
-      << boost::filesystem::path(__FILE__).filename().string()         \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << ","                \
-      << (std::strcmp(#module_name, CASTIS_CILOG_DEFAULT_MODULUE) == 0 \
-              ? ""                                                     \
-              : #module_name)                                          \
-      << "," << castis::logger::formatter(format, ##__VA_ARGS__)
+#define CIMLOG_3(module_name, severity, format, ...)                           \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)           \
+      << boost::filesystem::path(__FILE__).filename().string()                 \
+      << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << "," \
+      << castis::logger::formatter(format, ##__VA_ARGS__)
 
 #define CILOG(...)                                                             \
   BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), 1), CILOG_1, \
               CILOG_2)                                                         \
   (__VA_ARGS__)
 
-#define CILOG_1(severity) CIMLOG_2(default, severity)
-#define CILOG_2(severity, format, ...) \
-  CIMLOG_3(default, severity, format, ##__VA_ARGS__)
+#define CILOG_1(severity)                                                  \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
+                        severity)                                          \
+      << boost::filesystem::path(__FILE__).filename().string()             \
+      << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
+
+#define CILOG_2(severity, format, ...)                                     \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
+                        severity)                                          \
+      << boost::filesystem::path(__FILE__).filename().string()             \
+      << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"                   \
+      << castis::logger::formatter(format, ##__VA_ARGS__)
 
 enum severity_level {
   foo,
