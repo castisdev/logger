@@ -54,7 +54,7 @@
 
 #define CILOG_1(severity) CIMLOG_2(default, severity)
 #define CILOG_2(severity, format, ...) \
-  CIMLOG_3(default, severity, format, __VA_ARGS__)
+  CIMLOG_3(default, severity, format, ##__VA_ARGS__)
 
 enum severity_level {
   foo,

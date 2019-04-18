@@ -105,6 +105,7 @@ int main() {
   CIMLOG(module1, success) << "A success severity message";
   CIMLOG(module1, exception) << "A exception severity message";
   CIMLOG(module1, critical) << "A critical severity message";
+  CIMLOG(module1, critical, "format");
   CIMLOG(module1, critical, "format, %d", 1234);
   CIMLOG(module1, critical, "format, %d, %s", 1234, "string");
 
