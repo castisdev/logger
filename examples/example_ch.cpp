@@ -1,99 +1,42 @@
 #include "logger/castislogger.h"
 #include "logger/cichannellogger.h"
 
-struct Filter {
-  enum { min_level, specific_level };
-
-  Filter(const std::string &module, severity_level level)
-      : module_(module), level_type_(Filter::min_level), min_level_(level) {}
-  Filter(const std::string &module, std::set<severity_level> specific_levels)
-      : module_(module),
-        level_type_(Filter::specific_level),
-        specific_levels_(specific_levels) {}
-  Filter(severity_level level)
-      : level_type_(Filter::min_level), min_level_(level) {}
-  Filter(std::set<severity_level> specific_levels)
-      : level_type_(Filter::specific_level),
-        specific_levels_(specific_levels) {}
-
-  std::string module_;
-  int level_type_{min_level};
-  severity_level min_level_{info};
-  std::set<severity_level> specific_levels_;
-};
-
-typedef std::vector<Filter> filterList;
-inline bool func_severity_filter(
-    boost::log::value_ref<std::string> const &ch,
-    boost::log::value_ref<severity_level> const &level,
-    const filterList &filters) {
-  for (const auto &f : filters) {
-    if (f.module_.empty() || f.module_ == ch) {
-      if (f.level_type_ == Filter::min_level) {
-        return level >= f.min_level_;
-      } else {
-        return f.specific_levels_.find(level.get()) != f.specific_levels_.end();
-      }
-    }
-  }
-  return false;
-}
-
-namespace expr = boost::log::expressions;
-
 int main() {
-  auto sink1 = castis::logger::init_async_logger("example1", "1.0.0");
-  auto sink2 = castis::logger::init_async_logger("example2", "1.0.0");
-  auto sink3 = castis::logger::init_async_logger("example3", "1.0.0");
-  auto sink4 = castis::logger::init_async_logger("example4", "1.0.0");
-  auto sink5 = castis::logger::init_async_logger("example5", "1.0.0");
+  std::vector<castis::logger::Module> f1;
+  f1.push_back(castis::logger::Module("module1", debug));
+  auto sink1 = castis::logger::init_async_module_logger("example1", "1.0.0", f1, "example1");
 
-  {
-    filterList filters;
-    filters.push_back(Filter("module1", debug));
-    sink1->reset_filter();
-    sink1->set_filter(boost::phoenix::bind(
-        &func_severity_filter, expr::attr<std::string>("Channel"),
-        expr::attr<severity_level>("Severity"), filters));
-  }
+  std::vector<castis::logger::Module> f2;
+  f2.push_back(castis::logger::Module("default", warning));
+  f2.push_back(castis::logger::Module("module2", info));
+  auto sink2 = castis::logger::init_async_module_logger("example2", "1.0.0", f2, "example2");
 
-  {
-    filterList filters;
-    filters.push_back(Filter("default", info));
-    filters.push_back(Filter("module2", info));
-    sink2->reset_filter();
-    sink2->set_filter(boost::phoenix::bind(
-        &func_severity_filter, expr::attr<std::string>("Channel"),
-        expr::attr<severity_level>("Severity"), filters));
-  }
+  std::vector<castis::logger::Module> f3;
+  f3.push_back(castis::logger::Module("module1", std::set<severity_level>{foo, error}));
+  f3.push_back(castis::logger::Module("module3", std::set<severity_level>{warning}));
+  auto sink3 = castis::logger::init_async_module_logger("example3", "1.0.0", f3, "example3");
 
-  {
-    filterList filters;
-    filters.push_back(Filter("module1", std::set<severity_level>{foo, error}));
-    filters.push_back(Filter("module3", std::set<severity_level>{warning}));
-    sink3->reset_filter();
-    sink3->set_filter(boost::phoenix::bind(
-        &func_severity_filter, expr::attr<std::string>("Channel"),
-        expr::attr<severity_level>("Severity"), filters));
-  }
+  std::vector<castis::logger::Module> f4;
+  f4.push_back(castis::logger::Module(exception));
+  auto sink4 = castis::logger::init_async_module_logger("example4", "1.0.0", f4, "example4");
 
-  {
-    filterList filters;
-    filters.push_back(Filter(exception));
-    sink4->reset_filter();
-    sink4->set_filter(boost::phoenix::bind(
-        &func_severity_filter, expr::attr<std::string>("Channel"),
-        expr::attr<severity_level>("Severity"), filters));
-  }
+  std::vector<castis::logger::Module> f5;
+  f5.push_back(castis::logger::Module(std::set<severity_level>{info}));
+  auto sink5 = castis::logger::init_async_module_logger("example5", "1.0.0", f5, "example5");
 
-  {
-    filterList filters;
-    filters.push_back(Filter(std::set<severity_level>{info}));
-    sink5->reset_filter();
-    sink5->set_filter(boost::phoenix::bind(
-        &func_severity_filter, expr::attr<std::string>("Channel"),
-        expr::attr<severity_level>("Severity"), filters));
-  }
+  CILOG(foo) << "Just a foo";
+  CILOG(debug) << "A normal severity message";
+  CILOG(report) << "A notification severity message";
+  CILOG(warning) << "A warning severity message";
+  CILOG(info) << "A information severity message";
+  CILOG(error) << "A error severity message";
+  CILOG(fail) << "A fail severity message";
+  CILOG(success) << "A success severity message";
+  CILOG(exception) << "A exception severity message";
+  CILOG(critical) << "A critical severity message";
+  CILOG(critical, "format");
+  CILOG(critical, "format, %d", 1234);
+  CILOG(critical, "format, %d, %s", 1234, "string");
 
   CIMLOG(module1, foo) << "Just a foo";
   CIMLOG(module1, debug) << "A normal severity message";

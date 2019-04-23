@@ -102,10 +102,10 @@ class cilog_date_hour_backend
   std::string current_date_hour_;
 
  public:
-  explicit cilog_date_hour_backend(boost::filesystem::path const& target_path,
-                                   std::string const& file_name_suffix,
-                                   std::string const& file_name_prefix_format,
-                                   bool auto_flush)
+  cilog_date_hour_backend(boost::filesystem::path const& target_path,
+                          std::string const& file_name_suffix,
+                          std::string const& file_name_prefix_format,
+                          bool auto_flush)
       : auto_flush_(auto_flush),
         target_path_(target_path),
         file_name_suffix_(file_name_suffix),
@@ -199,9 +199,9 @@ class cilog_backend : public boost::log::sinks::basic_formatted_sink_backend<
   boost::gregorian::date current_date_;
 
  public:
-  explicit cilog_backend(boost::filesystem::path const& target_path,
-                         std::string const& file_name_suffix,
-                         uintmax_t rotation_size, bool auto_flush)
+  cilog_backend(boost::filesystem::path const& target_path,
+                std::string const& file_name_suffix, uintmax_t rotation_size,
+                bool auto_flush)
       : auto_flush_(auto_flush),
         target_path_(target_path),
         file_name_suffix_(file_name_suffix),
@@ -340,10 +340,10 @@ inline void init_logger(const std::string& app_name,
                         bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_backend> backend(new cilog_backend(
-      boost::filesystem::path(target), app_name, rotation_size, auto_flush));
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), app_name, rotation_size, auto_flush);
 
-  boost::shared_ptr<cilog_sync_sink_t> sink(new cilog_sync_sink_t(backend));
+  auto sink = boost::make_shared<cilog_sync_sink_t>(backend);
   sink->set_formatter(expr::stream
                       << app_name << "," << app_version << ","
                       << expr::format_date_time<boost::posix_time::ptime>(
@@ -364,10 +364,10 @@ inline boost::shared_ptr<cilog_async_sink_t> init_async_logger(
     int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_backend> backend(new cilog_backend(
-      boost::filesystem::path(target), app_name, rotation_size, auto_flush));
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), app_name, rotation_size, auto_flush);
 
-  boost::shared_ptr<cilog_async_sink_t> sink(new cilog_async_sink_t(backend));
+  auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
                       << app_name << "," << app_version << ","
                       << expr::format_date_time<boost::posix_time::ptime>(
@@ -384,12 +384,73 @@ inline boost::shared_ptr<cilog_async_sink_t> init_async_logger(
   return sink;
 }
 
-inline void stop_logger(boost::shared_ptr<cilog_async_sink_t>& sink) {
-  boost::shared_ptr<boost::log::core> core = boost::log::core::get();
-  core->remove_sink(sink);
-  sink->stop();
-  sink->flush();
-  sink.reset();
+struct Module {
+  enum { min_level, specific_level };
+
+  Module(const std::string& name, severity_level level)
+      : name_(name), level_type_(Module::min_level), min_level_(level) {}
+  Module(const std::string& name, std::set<severity_level> specific_levels)
+      : name_(name),
+        level_type_(Module::specific_level),
+        specific_levels_(specific_levels) {}
+  Module(severity_level level)
+      : level_type_(Module::min_level), min_level_(level) {}
+  Module(std::set<severity_level> specific_levels)
+      : level_type_(Module::specific_level),
+        specific_levels_(specific_levels) {}
+
+  std::string name_;
+  int level_type_{min_level};
+  severity_level min_level_{info};
+  std::set<severity_level> specific_levels_;
+};
+
+inline bool func_module_severity_filter(
+    boost::log::value_ref<std::string> const& ch,
+    boost::log::value_ref<severity_level> const& level,
+    const std::vector<Module>& modules) {
+  for (const auto& m : modules) {
+    if (m.name_.empty() || m.name_ == ch) {
+      if (m.level_type_ == Module::min_level) {
+        return level >= m.min_level_;
+      } else {
+        return m.specific_levels_.find(level.get()) != m.specific_levels_.end();
+      }
+    }
+  }
+  return false;
+}
+
+inline boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::vector<Module>& filters, const std::string& file_name_suffix,
+    const std::string& target = "./log",
+    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true) {
+  namespace expr = boost::log::expressions;
+  boost::log::add_common_attributes();
+
+  std::vector<boost::shared_ptr<cilog_async_sink_t>> sinks;
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), file_name_suffix, rotation_size,
+      auto_flush);
+
+  auto sink = boost::make_shared<cilog_async_sink_t>(backend);
+  sink->set_formatter(expr::stream
+                      << app_name << "," << app_version << ","
+                      << expr::format_date_time<boost::posix_time::ptime>(
+                             "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                      << ","
+                      << expr::attr<severity_level, severity_tag>("Severity")
+                      << "," << expr::smessage);
+
+  sink->set_filter(boost::phoenix::bind(
+      &func_module_severity_filter, expr::attr<std::string>("Channel"),
+      expr::attr<severity_level>("Severity"), filters));
+
+  boost::log::core::get()->add_sink(sink);
+  sinks.push_back(sink);
+
+  return sink;
 }
 
 inline boost::shared_ptr<cilog_date_hour_async_sink_t>
@@ -400,12 +461,11 @@ init_async_date_hour_logger(
     bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_date_hour_backend> backend(
-      new cilog_date_hour_backend(boost::filesystem::path(target), app_name,
-                                  file_name_prefix_format, auto_flush));
+  auto backend = boost::make_shared<cilog_date_hour_backend>(
+      boost::filesystem::path(target), app_name, file_name_prefix_format,
+      auto_flush);
 
-  boost::shared_ptr<cilog_date_hour_async_sink_t> sink(
-      new cilog_date_hour_async_sink_t(backend));
+  auto sink = boost::make_shared<cilog_date_hour_async_sink_t>(backend);
   sink->set_formatter(expr::stream
                       << app_name << "," << app_version << ","
                       << expr::format_date_time<boost::posix_time::ptime>(
@@ -440,11 +500,11 @@ inline boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
     int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_backend> backend(
-      new cilog_backend(boost::filesystem::path(target), file_name_suffix,
-                        rotation_size, auto_flush));
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), file_name_suffix, rotation_size,
+      auto_flush);
 
-  boost::shared_ptr<cilog_async_sink_t> sink(new cilog_async_sink_t(backend));
+  auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
                       << app_name << "," << app_version << ","
                       << expr::format_date_time<boost::posix_time::ptime>(
@@ -473,13 +533,11 @@ init_async_date_hour_level_logger(
     bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_date_hour_backend> backend(
-      new cilog_date_hour_backend(boost::filesystem::path(target),
-                                  file_name_suffix, file_name_prefix_format,
-                                  auto_flush));
+  auto backend = boost::make_shared<cilog_date_hour_backend>(
+      boost::filesystem::path(target), file_name_suffix,
+      file_name_prefix_format, auto_flush);
 
-  boost::shared_ptr<cilog_date_hour_async_sink_t> sink(
-      new cilog_date_hour_async_sink_t(backend));
+  auto sink = boost::make_shared<cilog_date_hour_async_sink_t>(backend);
   sink->set_formatter(expr::stream
                       << app_name << "," << app_version << ","
                       << expr::format_date_time<boost::posix_time::ptime>(

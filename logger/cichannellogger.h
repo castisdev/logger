@@ -314,12 +314,10 @@ inline boost::shared_ptr<cichannellog_async_sink> init_async_channel_logger(
     bool csv_format = true, bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_size_based_backup_backend> backend(
-      new cilog_size_based_backup_backend(boost::filesystem::path(target),
-                                          app_name, rotation_size, auto_flush));
+  auto backend = boost::make_shared<cilog_size_based_backup_backend>(
+      boost::filesystem::path(target), app_name, rotation_size, auto_flush);
 
-  boost::shared_ptr<cichannellog_async_sink> sink(
-      new cichannellog_async_sink(backend));
+  auto sink = boost::make_shared<cichannellog_async_sink>(backend);
 
   std::string fs = "%F::%C:%l";
   if (with_func_scope) fs = "%F::%c:%l";
@@ -370,13 +368,11 @@ init_async_date_hour_channel_logger(
     bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_date_hour_based_backup_backend> backend(
-      new cilog_date_hour_based_backup_backend(
-          boost::filesystem::path(target), app_name, file_name_prefix_format,
-          auto_flush));
+  auto backend = boost::make_shared<cilog_date_hour_based_backup_backend>(
+      boost::filesystem::path(target), app_name, file_name_prefix_format,
+      auto_flush);
 
-  boost::shared_ptr<cichannellog_date_hour_async_sink> sink(
-      new cichannellog_date_hour_async_sink(backend));
+  auto sink = boost::make_shared<cichannellog_date_hour_async_sink>(backend);
 
   std::string fs = "%F::%C:%l";
   if (with_func_scope) fs = "%F::%c:%l";
@@ -428,13 +424,11 @@ init_async_channel_level_logger(
     bool csv_format = true, bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_size_based_backup_backend> backend(
-      new cilog_size_based_backup_backend(boost::filesystem::path(target),
-                                          file_name_suffix, rotation_size,
-                                          auto_flush));
+  auto backend = boost::make_shared<cilog_size_based_backup_backend>(
+      boost::filesystem::path(target), file_name_suffix, rotation_size,
+      auto_flush);
 
-  boost::shared_ptr<cichannellog_async_sink> sink(
-      new cichannellog_async_sink(backend));
+  auto sink = boost::make_shared<cichannellog_async_sink>(backend);
 
   std::string fs = "%F::%C:%l";
   if (with_func_scope) fs = "%F::%c:%l";
@@ -490,13 +484,11 @@ init_async_date_hour_channel_level_logger(
     bool auto_flush = true) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_date_hour_based_backup_backend> backend(
-      new cilog_date_hour_based_backup_backend(
-          boost::filesystem::path(target), file_name_suffix,
-          file_name_prefix_format, auto_flush));
+  auto backend = boost::make_shared<cilog_date_hour_based_backup_backend>(
+      boost::filesystem::path(target), file_name_suffix,
+      file_name_prefix_format, auto_flush);
 
-  boost::shared_ptr<cichannellog_date_hour_async_sink> sink(
-      new cichannellog_date_hour_async_sink(backend));
+  auto sink = boost::make_shared<cichannellog_date_hour_async_sink>(backend);
 
   std::string fs = "%F::%C:%l";
   if (with_func_scope) fs = "%F::%c:%l";
