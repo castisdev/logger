@@ -2,22 +2,24 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include "castislogger.h"
 
-#define ACCESSLOG(_access_)                                              \
-  CIMLOG(access, info)                                                      \
-      << boost::log::add_value("remoteAddress", _access_.remote_addr)    \
-      << boost::log::add_value("remoteIdent", _access_.remote_ident)     \
-      << boost::log::add_value("userName", _access_.user_name)           \
-      << boost::log::add_value("requestTime", _access_.request_time)     \
-      << boost::log::add_value("requestLine", _access_.request_line)     \
-      << boost::log::add_value("status",                                    \
-                               static_cast<unsigned>(_access_.status))   \
-      << boost::log::add_value(                                             \
-             "contentLength",                                               \
-             static_cast<std::size_t>(_access_.content_length))          \
-      << boost::log::add_value("referer", _access_.referer)              \
-      << boost::log::add_value("userAgent", _access_.user_agent)         \
-      << boost::log::add_value("serveDuration", _access_.serve_duration) \
-      << _access_.to_string();
+#define ACCESSLOG(accesslog)                                             \
+  CIMLOG(access, info)                                                   \
+      << boost::log::add_value("remoteAddress", accesslog.remote_addr_)  \
+      << boost::log::add_value("remoteIdent", accesslog.remote_ident_)   \
+      << boost::log::add_value("userName", accesslog.user_name_)         \
+      << boost::log::add_value("requestTime", accesslog.request_time_)   \
+      << boost::log::add_value("requestLine", accesslog.request_line_)   \
+      << boost::log::add_value("status",                                 \
+                               static_cast<unsigned>(accesslog.status_)) \
+      << boost::log::add_value(                                          \
+             "contentLength",                                            \
+             static_cast<std::size_t>(accesslog.content_length_))        \
+      << boost::log::add_value("referer", accesslog.referer_)            \
+      << boost::log::add_value("userAgent", accesslog.user_agent_)       \
+      << boost::log::add_value(                                          \
+             "serveDuration",                                            \
+             static_cast<std::uint64_t>(accesslog.serve_duration_))      \
+      << accesslog.to_string();
 
 struct castisaccesslog_attr_tag;
 
@@ -59,71 +61,65 @@ static std::string request_time(boost::posix_time::ptime req_utc) {
 // https://developer.mozilla.org/ko/docs/Web/HTTP
 // https://httpd.apache.org/docs/2.4/en/logs.html
 // https://httpd.apache.org/docs/2.2/en/mod/mod_log_config.html#formats
-struct Access {
+struct AccessLog {
   // Remote client ip : %h
-  std::string remote_addr;
+  std::string remote_addr_;
   // REMOTE_IDENT : The remote logname, user id : %l
-  std::string remote_ident;
+  std::string remote_ident_;
   // The name of the authenticated remote user : %u
-  std::string user_name;
+  std::string user_name_;
   // Request time : Date and time of the request : %t
-  std::string request_time;
+  std::string request_time_;
   // The first line of the request. Example: GET / HTTP/1.0 : %r
-  std::string request_line;
+  std::string request_line_;
   // Final status code of http response : %>s
-  unsigned status;
+  unsigned status_;
   // Content-Length of http response : %b
-  std::size_t content_length;
+  std::size_t content_length_;
   // Referer of http req header : %{Referer}i
-  std::string referer;
+  std::string referer_;
   // User-Agent of http req heder : %{User-agent}i
-  std::string user_agent;
+  std::string user_agent_;
   // The time taken to serve the request, in microseconds : %D
-  std::uint64_t serve_duration;
+  std::uint64_t serve_duration_;
 
   // [:data] foramt -> [05/Sep/2018:16:48:09 +0900]
   // ':remote-addr - - [:date] ":method :uri HTTP/:http-version" :status
   // :res[content-length] ":referrer" ":user-agent"'
   std::string to_string() const {
     namespace alog = castis::logger::accesslog;
-    const Access& access = *this;
+    const AccessLog& access = *this;
     std::string str =
-        (access.remote_addr.empty() ? alog::kEmpty
-                                         : access.remote_addr) +
+        (access.remote_addr_.empty() ? alog::kEmpty : access.remote_addr_) +
         alog::kDelimiter +
-        (access.remote_ident.empty() ? alog::kEmpty
-                                          : access.remote_ident) +
+        (access.remote_ident_.empty() ? alog::kEmpty : access.remote_ident_) +
         alog::kDelimiter +
-        (access.user_name.empty() ? alog::kEmpty : access.user_name) +
+        (access.user_name_.empty() ? alog::kEmpty : access.user_name_) +
         alog::kDelimiter +
-        (access.request_time.empty() ? alog::kEmpty
-                                          : access.request_time) +
+        (access.request_time_.empty() ? alog::kEmpty : access.request_time_) +
         alog::kDelimiter + alog::kQuotes +
-        (access.request_line.empty() ? alog::kEmpty
-                                          : access.request_line) +
+        (access.request_line_.empty() ? alog::kEmpty : access.request_line_) +
         alog::kQuotes + alog::kDelimiter +
-        ((access.status <= 0) ? alog::kEmpty
-                                   : std::to_string(access.status)) +
+        ((access.status_ <= 0) ? alog::kEmpty
+                               : std::to_string(access.status_)) +
         alog::kDelimiter +
-        ((access.content_length <= 0)
+        ((access.content_length_ <= 0)
              ? alog::kEmpty
-             : std::to_string(access.content_length)) +
+             : std::to_string(access.content_length_)) +
         alog::kDelimiter + alog::kQuotes +
-        (access.referer.empty() ? alog::kEmpty : access.referer) +
+        (access.referer_.empty() ? alog::kEmpty : access.referer_) +
         alog::kQuotes + alog::kDelimiter + alog::kQuotes +
-        (access.user_agent.empty() ? alog::kEmpty
-                                        : access.user_agent) +
+        (access.user_agent_.empty() ? alog::kEmpty : access.user_agent_) +
         alog::kQuotes;
     return str;
   }
 
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const Access& access);
+  friend std::ostream& operator<<(std::ostream& os, const AccessLog& accesslog);
 };
 
 inline std::ostream& operator<<(std::ostream& strm,
-                                const Access& access) {
-  strm << access.to_string();
+                                const AccessLog& accesslog) {
+  strm << accesslog.to_string();
   return strm;
 }
 
@@ -197,8 +193,7 @@ inline boost::shared_ptr<cilog_async_sink_t> init_access_logger(
       << expr::attr<std::size_t, castisaccesslog_attr_tag>("contentLength")
       << accesslog::kDelimiter << accesslog::kQuotes
       << expr::attr<std::string, castisaccesslog_attr_tag>("referer")
-      << accesslog::kQuotes << accesslog::kDelimiter
-      << accesslog::kQuotes
+      << accesslog::kQuotes << accesslog::kDelimiter << accesslog::kQuotes
       << expr::attr<std::string, castisaccesslog_attr_tag>("userAgent")
       << accesslog::kQuotes);
 

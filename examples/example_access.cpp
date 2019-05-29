@@ -11,12 +11,12 @@ int main() {
                                                         "module1");
   sinks.push_back(sink1);
 
-  using Access = castis::logger::Access;
+  using AccessLog = castis::logger::AccessLog;
   auto sinkaccess = castis::logger::init_access_logger("access");
   sinks.push_back(sinkaccess);
 
   auto request1_time = boost::posix_time::microsec_clock::universal_time();
-  Access a = Access{
+  AccessLog a = AccessLog{
       "142.43.55.13",
       "main",
       "main",
@@ -32,7 +32,7 @@ int main() {
   auto request2_time = boost::posix_time::microsec_clock::universal_time();
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
-  Access b = Access{
+  AccessLog b = AccessLog{
       "142.43.55.13",
       "",
       "",
