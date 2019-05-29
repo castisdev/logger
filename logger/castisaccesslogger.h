@@ -2,29 +2,29 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include "castislogger.h"
 
-#define ACCESSLOG(http_access)                                              \
+#define ACCESSLOG(_access_)                                              \
   CIMLOG(access, info)                                                      \
-      << boost::log::add_value("remoteAddress", http_access.remote_addr)    \
-      << boost::log::add_value("remoteIdent", http_access.remote_ident)     \
-      << boost::log::add_value("userName", http_access.user_name)           \
-      << boost::log::add_value("requestTime", http_access.request_time)     \
-      << boost::log::add_value("requestLine", http_access.request_line)     \
+      << boost::log::add_value("remoteAddress", _access_.remote_addr)    \
+      << boost::log::add_value("remoteIdent", _access_.remote_ident)     \
+      << boost::log::add_value("userName", _access_.user_name)           \
+      << boost::log::add_value("requestTime", _access_.request_time)     \
+      << boost::log::add_value("requestLine", _access_.request_line)     \
       << boost::log::add_value("status",                                    \
-                               static_cast<unsigned>(http_access.status))   \
+                               static_cast<unsigned>(_access_.status))   \
       << boost::log::add_value(                                             \
              "contentLength",                                               \
-             static_cast<std::size_t>(http_access.content_length))          \
-      << boost::log::add_value("referer", http_access.referer)              \
-      << boost::log::add_value("userAgent", http_access.user_agent)         \
-      << boost::log::add_value("serveDuration", http_access.serve_duration) \
-      << http_access.to_string();
+             static_cast<std::size_t>(_access_.content_length))          \
+      << boost::log::add_value("referer", _access_.referer)              \
+      << boost::log::add_value("userAgent", _access_.user_agent)         \
+      << boost::log::add_value("serveDuration", _access_.serve_duration) \
+      << _access_.to_string();
 
-struct cihttpaccesslog_attr_tag;
+struct castisaccesslog_attr_tag;
 
 namespace castis {
 namespace logger {
 
-namespace httpaccesslog {
+namespace accesslog {
 
 const std::string kDelimiter = " ";
 const std::string kQuotes = "\"";
@@ -33,7 +33,7 @@ static std::string request_line(const std::string& method,
                                 const std::string& uri,
                                 unsigned version_major = 1,
                                 unsigned version_minor = 1) {
-  return method + httpaccesslog::kDelimiter + uri + httpaccesslog::kDelimiter +
+  return method + accesslog::kDelimiter + uri + accesslog::kDelimiter +
          "HTTP/" + std::to_string(version_major) + "." +
          std::to_string(version_minor);
 }
@@ -48,18 +48,18 @@ static std::string request_time(boost::posix_time::ptime req_utc) {
   struct tm nowtm;
   localtime_r(&utct, &nowtm);
   char mbstr[64];
-  std::string request_time_str = httpaccesslog::kEmpty;
+  std::string request_time_str = accesslog::kEmpty;
   std::size_t n =
       std::strftime(mbstr, sizeof(mbstr), "[%d/%b/%Y:%H:%M:%S %z]", &nowtm);
   if (n > 0) request_time_str.assign(mbstr, n);
   return request_time_str;
 }
-}  // namespace httpaccesslog
+}  // namespace accesslog
 
 // https://developer.mozilla.org/ko/docs/Web/HTTP
 // https://httpd.apache.org/docs/2.4/en/logs.html
 // https://httpd.apache.org/docs/2.2/en/mod/mod_log_config.html#formats
-struct HttpAccess {
+struct Access {
   // Remote client ip : %h
   std::string remote_addr;
   // REMOTE_IDENT : The remote logname, user id : %l
@@ -85,45 +85,45 @@ struct HttpAccess {
   // ':remote-addr - - [:date] ":method :uri HTTP/:http-version" :status
   // :res[content-length] ":referrer" ":user-agent"'
   std::string to_string() const {
-    namespace alog = castis::logger::httpaccesslog;
-    const HttpAccess& http_access = *this;
+    namespace alog = castis::logger::accesslog;
+    const Access& access = *this;
     std::string str =
-        (http_access.remote_addr.empty() ? alog::kEmpty
-                                         : http_access.remote_addr) +
+        (access.remote_addr.empty() ? alog::kEmpty
+                                         : access.remote_addr) +
         alog::kDelimiter +
-        (http_access.remote_ident.empty() ? alog::kEmpty
-                                          : http_access.remote_ident) +
+        (access.remote_ident.empty() ? alog::kEmpty
+                                          : access.remote_ident) +
         alog::kDelimiter +
-        (http_access.user_name.empty() ? alog::kEmpty : http_access.user_name) +
+        (access.user_name.empty() ? alog::kEmpty : access.user_name) +
         alog::kDelimiter +
-        (http_access.request_time.empty() ? alog::kEmpty
-                                          : http_access.request_time) +
+        (access.request_time.empty() ? alog::kEmpty
+                                          : access.request_time) +
         alog::kDelimiter + alog::kQuotes +
-        (http_access.request_line.empty() ? alog::kEmpty
-                                          : http_access.request_line) +
+        (access.request_line.empty() ? alog::kEmpty
+                                          : access.request_line) +
         alog::kQuotes + alog::kDelimiter +
-        ((http_access.status <= 0) ? alog::kEmpty
-                                   : std::to_string(http_access.status)) +
+        ((access.status <= 0) ? alog::kEmpty
+                                   : std::to_string(access.status)) +
         alog::kDelimiter +
-        ((http_access.content_length <= 0)
+        ((access.content_length <= 0)
              ? alog::kEmpty
-             : std::to_string(http_access.content_length)) +
+             : std::to_string(access.content_length)) +
         alog::kDelimiter + alog::kQuotes +
-        (http_access.referer.empty() ? alog::kEmpty : http_access.referer) +
+        (access.referer.empty() ? alog::kEmpty : access.referer) +
         alog::kQuotes + alog::kDelimiter + alog::kQuotes +
-        (http_access.user_agent.empty() ? alog::kEmpty
-                                        : http_access.user_agent) +
+        (access.user_agent.empty() ? alog::kEmpty
+                                        : access.user_agent) +
         alog::kQuotes;
     return str;
   }
 
   friend std::ostream& operator<<(std::ostream& os,
-                                  const HttpAccess& http_access);
+                                  const Access& access);
 };
 
 inline std::ostream& operator<<(std::ostream& strm,
-                                const HttpAccess& http_access) {
-  strm << http_access.to_string();
+                                const Access& access) {
+  strm << access.to_string();
   return strm;
 }
 
@@ -132,8 +132,8 @@ inline std::ostream& operator<<(std::ostream& strm,
 
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
-    boost::log::to_log_manip<unsigned, cihttpaccesslog_attr_tag> const& manip) {
-  namespace alog = castis::logger::httpaccesslog;
+    boost::log::to_log_manip<unsigned, castisaccesslog_attr_tag> const& manip) {
+  namespace alog = castis::logger::accesslog;
   unsigned value = manip.get();
   if (value <= 0)
     strm << alog::kEmpty;
@@ -143,9 +143,9 @@ inline boost::log::formatting_ostream& operator<<(
 }
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
-    boost::log::to_log_manip<std::size_t, cihttpaccesslog_attr_tag> const&
+    boost::log::to_log_manip<std::size_t, castisaccesslog_attr_tag> const&
         manip) {
-  namespace alog = castis::logger::httpaccesslog;
+  namespace alog = castis::logger::accesslog;
   std::size_t value = manip.get();
   if (value <= 0)
     strm << alog::kEmpty;
@@ -155,9 +155,9 @@ inline boost::log::formatting_ostream& operator<<(
 }
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
-    boost::log::to_log_manip<std::string, cihttpaccesslog_attr_tag> const&
+    boost::log::to_log_manip<std::string, castisaccesslog_attr_tag> const&
         manip) {
-  namespace alog = castis::logger::httpaccesslog;
+  namespace alog = castis::logger::accesslog;
   std::string value = manip.get();
   if (value.empty())
     strm << alog::kEmpty;
@@ -169,7 +169,7 @@ inline boost::log::formatting_ostream& operator<<(
 namespace castis {
 namespace logger {
 
-inline boost::shared_ptr<cilog_async_sink_t> init_httpaccess_logger(
+inline boost::shared_ptr<cilog_async_sink_t> init_access_logger(
     const std::string& file_name, const std::string& target = "./log",
     int64_t rotation_size = 100 * 100 * 1024) {
   namespace expr = boost::log::expressions;
@@ -182,25 +182,25 @@ inline boost::shared_ptr<cilog_async_sink_t> init_httpaccess_logger(
   // https://zetawiki.com/wiki/NCSA_%EB%A1%9C%EA%B7%B8_%ED%98%95%EC%8B%9D
   sink->set_formatter(
       expr::stream
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("remoteAddress")
-      << httpaccesslog::kDelimiter
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("remoteIdent")
-      << httpaccesslog::kDelimiter
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("userName")
-      << httpaccesslog::kDelimiter
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("requestTime")
-      << httpaccesslog::kDelimiter << httpaccesslog::kQuotes
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("requestLine")
-      << httpaccesslog::kQuotes << httpaccesslog::kDelimiter
-      << expr::attr<unsigned, cihttpaccesslog_attr_tag>("status")
-      << httpaccesslog::kDelimiter
-      << expr::attr<std::size_t, cihttpaccesslog_attr_tag>("contentLength")
-      << httpaccesslog::kDelimiter << httpaccesslog::kQuotes
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("referer")
-      << httpaccesslog::kQuotes << httpaccesslog::kDelimiter
-      << httpaccesslog::kQuotes
-      << expr::attr<std::string, cihttpaccesslog_attr_tag>("userAgent")
-      << httpaccesslog::kQuotes);
+      << expr::attr<std::string, castisaccesslog_attr_tag>("remoteAddress")
+      << accesslog::kDelimiter
+      << expr::attr<std::string, castisaccesslog_attr_tag>("remoteIdent")
+      << accesslog::kDelimiter
+      << expr::attr<std::string, castisaccesslog_attr_tag>("userName")
+      << accesslog::kDelimiter
+      << expr::attr<std::string, castisaccesslog_attr_tag>("requestTime")
+      << accesslog::kDelimiter << accesslog::kQuotes
+      << expr::attr<std::string, castisaccesslog_attr_tag>("requestLine")
+      << accesslog::kQuotes << accesslog::kDelimiter
+      << expr::attr<unsigned, castisaccesslog_attr_tag>("status")
+      << accesslog::kDelimiter
+      << expr::attr<std::size_t, castisaccesslog_attr_tag>("contentLength")
+      << accesslog::kDelimiter << accesslog::kQuotes
+      << expr::attr<std::string, castisaccesslog_attr_tag>("referer")
+      << accesslog::kQuotes << accesslog::kDelimiter
+      << accesslog::kQuotes
+      << expr::attr<std::string, castisaccesslog_attr_tag>("userAgent")
+      << accesslog::kQuotes);
 
   sink->set_filter(expr::attr<std::string>("Channel") == "access");
   boost::log::core::get()->add_sink(sink);
