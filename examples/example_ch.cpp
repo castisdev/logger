@@ -1,5 +1,4 @@
 #include "logger/castislogger.h"
-#include "logger/cichannellogger.h"
 
 int main() {
   std::vector<castis::logger::Module> f1;

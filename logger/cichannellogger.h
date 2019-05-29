@@ -1,4 +1,5 @@
 #pragma once
+
 #include <boost/log/attributes/named_scope.hpp>
 #include <boost/log/expressions/formatters/csv_decorator.hpp>
 #include <boost/log/expressions/formatters/named_scope.hpp>
@@ -6,11 +7,13 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "castislogger.h"
 
+// [[deprecated]]
+// cilogger 가 channel 속성을 갖게됨으로해서, 더이상 사용할 필요가 없어짐
+// 
 // cichannellogger.h
 //
 // almost logic come from castislogger.h
 //
-
 #define CILOG_CHANNEL(channel_name, severity) \
   BOOST_LOG_FUNCTION()                        \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), channel_name, severity)
@@ -19,20 +22,6 @@
   BOOST_LOG_FUNCTION()                                               \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), channel_name, severity) \
       << castis::logger::formatter(format, ##__VA_ARGS__)
-
-// cilog_size_based_backup_backend :
-//
-// almost logics come from cilog_backend
-//
-// log file name example:
-// active log file :
-// example.log
-// backup log file :
-// 2018-10/2018-10-12[0]_example.log
-// 2018-10/2018-10-12[1]_example.log
-//
-// WARN : crash when log path set to current directory {"."}.
-// fiexed : Fix #12495 BOOST-1.68.0
 
 class cilog_date_hour_based_backup_backend
     : public boost::log::sinks::basic_formatted_sink_backend<
@@ -145,6 +134,19 @@ class cilog_date_hour_based_backup_backend
   }
 };
 
+// cilog_size_based_backup_backend :
+// change: backup file begin index : 0 -> 1
+// almost logics come from cilog_backend
+//
+// log file name example:
+// active log file :
+// example.log
+// backup log file :
+// 2018-10/2018-10-12[1]_example.log
+// 2018-10/2018-10-12[2]_example.log
+//
+// WARN : crash when log path set to current directory {"."}.
+// fiexed : Fix #12495 BOOST-1.68.0
 class cilog_size_based_backup_backend
     : public boost::log::sinks::basic_formatted_sink_backend<
           char, boost::log::sinks::synchronized_feeding> {
@@ -157,6 +159,7 @@ class cilog_size_based_backup_backend
   uintmax_t rotation_size_;
   uintmax_t characters_written_;
   boost::gregorian::date current_date_;
+  const unsigned int kBackupBeginIndex{1};
 
  public:
   explicit cilog_size_based_backup_backend(
@@ -287,7 +290,7 @@ class cilog_size_based_backup_backend
   uintmax_t parse_index(std::string const& filename) {
     size_t pos_index_begin = filename.find('[');
     size_t pos_index_end = filename.find(']');
-    unsigned int index = 0;
+    unsigned int index = kBackupBeginIndex;
     if (pos_index_begin != std::string::npos &&
         pos_index_end != std::string::npos) {
       index = atoi(

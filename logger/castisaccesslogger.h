@@ -1,32 +1,23 @@
 #pragma once
-
-#include <boost/date_time/local_time/local_time.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
-#include <chrono>
-#include <ctime>
-#include <iostream>
-#include "cichannellogger.h"
+#include "castislogger.h"
 
-//
-// [[deprecated]]
-// castishttpaccesslogger.h 로 대체됨
-//
-// cihttpaccesslogger.h
-//
-#define HTTPACCESSLOG(http_access)                                        \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), "ACCESS", info)              \
-      << boost::log::add_value("remoteAddress", http_access.remote_addr)  \
-      << boost::log::add_value("remoteIdent", http_access.remote_ident)   \
-      << boost::log::add_value("userName", http_access.user_name)         \
-      << boost::log::add_value("requestTime", http_access.request_time)   \
-      << boost::log::add_value("requestLine", http_access.request_line)   \
-      << boost::log::add_value("status",                                  \
-                               static_cast<unsigned>(http_access.status)) \
-      << boost::log::add_value(                                           \
-             "contentLength",                                             \
-             static_cast<std::size_t>(http_access.content_length))        \
-      << boost::log::add_value("referer", http_access.referer)            \
-      << boost::log::add_value("userAgent", http_access.user_agent)
+#define ACCESSLOG(http_access)                                              \
+  CIMLOG(access, info)                                                      \
+      << boost::log::add_value("remoteAddress", http_access.remote_addr)    \
+      << boost::log::add_value("remoteIdent", http_access.remote_ident)     \
+      << boost::log::add_value("userName", http_access.user_name)           \
+      << boost::log::add_value("requestTime", http_access.request_time)     \
+      << boost::log::add_value("requestLine", http_access.request_line)     \
+      << boost::log::add_value("status",                                    \
+                               static_cast<unsigned>(http_access.status))   \
+      << boost::log::add_value(                                             \
+             "contentLength",                                               \
+             static_cast<std::size_t>(http_access.content_length))          \
+      << boost::log::add_value("referer", http_access.referer)              \
+      << boost::log::add_value("userAgent", http_access.user_agent)         \
+      << boost::log::add_value("serveDuration", http_access.serve_duration) \
+      << http_access.to_string();
 
 struct cihttpaccesslog_attr_tag;
 
@@ -38,7 +29,6 @@ namespace httpaccesslog {
 const std::string kDelimiter = " ";
 const std::string kQuotes = "\"";
 const std::string kEmpty = "-";
-
 static std::string request_line(const std::string& method,
                                 const std::string& uri,
                                 unsigned version_major = 1,
@@ -47,10 +37,16 @@ static std::string request_line(const std::string& method,
          "HTTP/" + std::to_string(version_major) + "." +
          std::to_string(version_minor);
 }
-static std::string request_time() {
-  std::time_t req_t = std::time(nullptr);
+static std::uint64_t serve_duration(boost::posix_time::ptime req_utc) {
+  auto res_utc = boost::posix_time::microsec_clock::universal_time();
+  auto duration = res_utc - req_utc;
+  std::uint64_t du = duration.total_milliseconds();
+  return du;
+}
+static std::string request_time(boost::posix_time::ptime req_utc) {
+  std::time_t utct = boost::posix_time::to_time_t(req_utc);
   struct tm nowtm;
-  localtime_r(&req_t, &nowtm);
+  localtime_r(&utct, &nowtm);
   char mbstr[64];
   std::string request_time_str = httpaccesslog::kEmpty;
   std::size_t n =
@@ -60,17 +56,30 @@ static std::string request_time() {
 }
 }  // namespace httpaccesslog
 
-struct HttpAccess {          // https://developer.mozilla.org/ko/docs/Web/HTTP
-  std::string remote_addr;   // Remote client ip
-  std::string remote_ident;  // REMOTE_IDENT : The remote logname, user id
-  std::string user_name;     // The name of the authenticated remote user
-  std::string request_time;  // Request time : Date and time of the request.
-  std::string
-      request_line;  // The first line of the request. Example: GET / HTTP/1.0
-  unsigned status;   // Final status code of http response
-  std::size_t content_length;  // Content-Length of http response
-  std::string referer;         // Referer of http req header
-  std::string user_agent;      // User-Agent of http req heder
+// https://developer.mozilla.org/ko/docs/Web/HTTP
+// https://httpd.apache.org/docs/2.4/en/logs.html
+// https://httpd.apache.org/docs/2.2/en/mod/mod_log_config.html#formats
+struct HttpAccess {
+  // Remote client ip : %h
+  std::string remote_addr;
+  // REMOTE_IDENT : The remote logname, user id : %l
+  std::string remote_ident;
+  // The name of the authenticated remote user : %u
+  std::string user_name;
+  // Request time : Date and time of the request : %t
+  std::string request_time;
+  // The first line of the request. Example: GET / HTTP/1.0 : %r
+  std::string request_line;
+  // Final status code of http response : %>s
+  unsigned status;
+  // Content-Length of http response : %b
+  std::size_t content_length;
+  // Referer of http req header : %{Referer}i
+  std::string referer;
+  // User-Agent of http req heder : %{User-agent}i
+  std::string user_agent;
+  // The time taken to serve the request, in microseconds : %D
+  std::uint64_t serve_duration;
 
   // [:data] foramt -> [05/Sep/2018:16:48:09 +0900]
   // ':remote-addr - - [:date] ":method :uri HTTP/:http-version" :status
@@ -144,7 +153,6 @@ inline boost::log::formatting_ostream& operator<<(
     strm << value;
   return strm;
 }
-
 inline boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
     boost::log::to_log_manip<std::string, cihttpaccesslog_attr_tag> const&
@@ -161,18 +169,17 @@ inline boost::log::formatting_ostream& operator<<(
 namespace castis {
 namespace logger {
 
-inline boost::shared_ptr<cichannellog_async_sink> init_httpaccess_logger(
+inline boost::shared_ptr<cilog_async_sink_t> init_httpaccess_logger(
     const std::string& file_name, const std::string& target = "./log",
     int64_t rotation_size = 100 * 100 * 1024) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  boost::shared_ptr<cilog_size_based_backup_backend> backend(
-      new cilog_size_based_backup_backend(boost::filesystem::path(target),
-                                          file_name, rotation_size, true));
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), file_name, rotation_size, true);
+  auto sink = boost::make_shared<cilog_async_sink_t>(backend);
 
-  boost::shared_ptr<cichannellog_async_sink> sink(
-      new cichannellog_async_sink(backend));
-
+  // NCSA Combined Log Format
+  // https://zetawiki.com/wiki/NCSA_%EB%A1%9C%EA%B7%B8_%ED%98%95%EC%8B%9D
   sink->set_formatter(
       expr::stream
       << expr::attr<std::string, cihttpaccesslog_attr_tag>("remoteAddress")
@@ -195,7 +202,7 @@ inline boost::shared_ptr<cichannellog_async_sink> init_httpaccess_logger(
       << expr::attr<std::string, cihttpaccesslog_attr_tag>("userAgent")
       << httpaccesslog::kQuotes);
 
-  sink->set_filter(expr::attr<std::string>("Channel") == "ACCESS");
+  sink->set_filter(expr::attr<std::string>("Channel") == "access");
   boost::log::core::get()->add_sink(sink);
   return sink;
 }
