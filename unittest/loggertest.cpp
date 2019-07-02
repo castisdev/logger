@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <fstream>
 #include <string>
+#include <boost/date_time.hpp>
+
 #include "logger/castislogger.h"
 
 std::string datetime_string_with_format(std::string const& format) {
