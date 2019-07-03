@@ -116,14 +116,38 @@ boost::shared_ptr<cichannellog_async_sink> init_httpaccess_logger(
 
 boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
-    boost::log::to_log_manip<unsigned, cihttpaccesslog_attr_tag> const& manip);
+    boost::log::to_log_manip<unsigned, cihttpaccesslog_attr_tag> const& manip) {
+  namespace alog = castis::logger::httpaccesslog;
+  unsigned value = manip.get();
+  if (value <= 0)
+    strm << alog::kEmpty;
+  else
+    strm << value;
+  return strm;
+}
 
 boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
     boost::log::to_log_manip<std::size_t, cihttpaccesslog_attr_tag> const&
-        manip);
+        manip) {
+  namespace alog = castis::logger::httpaccesslog;
+  std::size_t value = manip.get();
+  if (value <= 0)
+    strm << alog::kEmpty;
+  else
+    strm << value;
+  return strm;
+}
 
 boost::log::formatting_ostream& operator<<(
     boost::log::formatting_ostream& strm,
     boost::log::to_log_manip<std::string, cihttpaccesslog_attr_tag> const&
-        manip);
+        manip) {
+  namespace alog = castis::logger::httpaccesslog;
+  std::string value = manip.get();
+  if (value.empty())
+    strm << alog::kEmpty;
+  else
+    strm << value;
+  return strm;
+}
