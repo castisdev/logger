@@ -4,9 +4,6 @@ project(${PROJECT_NAME})
 find_package(Boost)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(
-  SYSTEM ${Boost_INCLUDE_DIRS}
-)
 set(CMAKE_CXX_STANDARD 17)
 
 set(SRCS

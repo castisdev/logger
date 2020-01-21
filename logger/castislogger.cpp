@@ -496,10 +496,5 @@ init_async_date_hour_level_logger(
   return sink;
 }
 
-boost::format formatter_r(boost::format& format) { return format; }
-
-boost::format formatter(const char* const format) {
-  return boost::format(format);
-}
 }  // namespace logger
 }  // namespace castis

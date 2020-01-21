@@ -5,7 +5,7 @@ int main() {
   auto sink_hour = castis::logger::init_async_date_hour_logger("example_hour", "1.0.0");
   auto sink_hour_level_sink = castis::logger::init_async_date_hour_level_logger(
     "example", "1.0.0", {error, exception}, "error_exception");
-  
+
   // support severity levels
   CILOG(foo) << "Just a foo";
   CILOG(debug) << "A normal severity message";
@@ -21,7 +21,7 @@ int main() {
   // support both streams and printf-style format
   CILOG(report) << "strings(" << "abc" << "), integers(" << 1
                 << "), float numbers(" << 3.14 << ")...";
-  CILOG(report, "strings(%s), integers(%d), float numbers(%.2f)...",
+  CILOG(report, "strings({:s}), integers({:d}), float numbers({:.2f})...",
                  "abc", 1, 3.14);
 
   for (int i = 0; i < 1000000; ++i) {

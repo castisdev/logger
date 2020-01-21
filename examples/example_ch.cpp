@@ -34,8 +34,8 @@ int main() {
   CILOG(exception) << "A exception severity message";
   CILOG(critical) << "A critical severity message";
   CILOG(critical, "format");
-  CILOG(critical, "format, %d", 1234);
-  CILOG(critical, "format, %d, %s", 1234, "string");
+  CILOG(critical, "format, {:d}", 1234);
+  CILOG(critical, "format, {:d}, {:s}", 1234, "string");
 
   CIMLOG(module1, foo) << "Just a foo";
   CIMLOG(module1, debug) << "A normal severity message";
@@ -48,8 +48,8 @@ int main() {
   CIMLOG(module1, exception) << "A exception severity message";
   CIMLOG(module1, critical) << "A critical severity message";
   CIMLOG(module1, critical, "format");
-  CIMLOG(module1, critical, "format, %d", 1234);
-  CIMLOG(module1, critical, "format, %d, %s", 1234, "string");
+  CIMLOG(module1, critical, "format, {:d}", 1234);
+  CIMLOG(module1, critical, "format, {:d}, {:s}", 1234, "string");
 
   CIMLOG(module2, foo) << "Just a foo";
   CIMLOG(module2, debug) << "A normal severity message";
@@ -61,8 +61,8 @@ int main() {
   CIMLOG(module2, success) << "A success severity message";
   CIMLOG(module2, exception) << "A exception severity message";
   CIMLOG(module2, critical) << "A critical severity message";
-  CIMLOG(module2, critical, "format, %d", 1234);
-  CIMLOG(module2, critical, "format, %d, %s", 1234, "string");
+  CIMLOG(module2, critical, "format, {:d}", 1234);
+  CIMLOG(module2, critical, "format, {:d}, {:s}", 1234, "string");
 
   CIMLOG(module3, foo) << "Just a foo";
   CIMLOG(module3, debug) << "A normal severity message";
@@ -74,8 +74,8 @@ int main() {
   CIMLOG(module3, success) << "A success severity message";
   CIMLOG(module3, exception) << "A exception severity message";
   CIMLOG(module3, critical) << "A critical severity message";
-  CIMLOG(module3, critical, "format, %d", 1234);
-  CIMLOG(module3, critical, "format, %d, %s", 1234, "string");
+  CIMLOG(module3, critical, "format, {:d}", 1234);
+  CIMLOG(module3, critical, "format, {:d}, {:s}", 1234, "string");
 
   castis::logger::stop_logger(sink1);
   castis::logger::stop_logger(sink2);

@@ -7,7 +7,6 @@
 
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/format.hpp>
 #include <boost/log/sinks/async_frontend.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/record_ostream.hpp>
@@ -15,6 +14,7 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/regex_fwd.hpp>
+#include "fmt/core.h"
 
 #define CASTIS_CILOG_DEFAULT_MODULUE "default"
 
@@ -28,11 +28,11 @@
       << boost::filesystem::path(__FILE__).filename().string()       \
       << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << ","
 
-#define CIMLOG_3(module_name, severity, format, ...)                           \
+#define CIMLOG_3(module_name, severity, fmt_str, ...)                           \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)           \
       << boost::filesystem::path(__FILE__).filename().string()                 \
       << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << "," \
-      << castis::logger::formatter(format, ##__VA_ARGS__)
+      << fmt::format(fmt_str, ##__VA_ARGS__)
 
 #define CILOG(...)                                                             \
   BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), 1), CILOG_1, \
@@ -45,12 +45,12 @@
       << boost::filesystem::path(__FILE__).filename().string()             \
       << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
 
-#define CILOG_2(severity, format, ...)                                     \
+#define CILOG_2(severity, fmt_str, ...)                                     \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
       << boost::filesystem::path(__FILE__).filename().string()             \
       << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"                   \
-      << castis::logger::formatter(format, ##__VA_ARGS__)
+      << fmt::format(fmt_str, ##__VA_ARGS__)
 
 enum severity_level {
   foo,
@@ -218,21 +218,6 @@ void stop_logger(Sink sink) {
   sink.reset();
 }
 
-boost::format formatter_r(boost::format& format);
-
-template <typename T, typename... Params>
-inline boost::format formatter_r(boost::format& format, T arg,
-                                 Params... parameters) {
-  return formatter_r(format % arg, parameters...);
-}
-
-boost::format formatter(const char* const format);
-
-template <typename T, typename... Params>
-inline boost::format formatter(const char* const format, T arg,
-                               Params... parameters) {
-  return formatter_r(boost::format(format) % arg, parameters...);
-}
 }  // namespace logger
 }  // namespace castis
 
