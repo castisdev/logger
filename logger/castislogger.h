@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -172,6 +173,17 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<Module>& filters, const std::string& file_name_suffix,
     const std::string& target = "./log",
+    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
+
+bool func_module_ptr_severity_filter(
+    boost::log::value_ref<std::string> const& ch,
+    boost::log::value_ref<severity_level> const& level,
+    const std::vector<std::shared_ptr<Module>>& modules);
+
+boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::vector<std::shared_ptr<Module>>& filters,
+    const std::string& file_name_suffix, const std::string& target = "./log",
     int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
 
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(

@@ -1,5 +1,8 @@
 #pragma once
+
 #include <boost/log/utility/manipulators/add_value.hpp>
+#include <boost/utility/string_view.hpp>
+
 #include "castislogger.h"
 
 #define ACCESSLOG(accesslog)                                             \
@@ -19,7 +22,7 @@
       << boost::log::add_value(                                          \
              "serveDuration",                                            \
              static_cast<std::uint64_t>(accesslog.serve_duration_))      \
-      << accesslog.to_string();
+      << accesslog;
 
 struct castisaccesslog_attr_tag;
 
@@ -27,7 +30,7 @@ namespace castis {
 namespace logger {
 namespace accesslog {
 
-std::string request_line(const std::string& method, const std::string& uri,
+std::string request_line(boost::string_view method, boost::string_view uri,
                          unsigned version_major = 1,
                          unsigned version_minor = 1);
 std::uint64_t serve_duration(boost::posix_time::ptime req_utc);
@@ -38,6 +41,12 @@ std::string request_time(boost::posix_time::ptime req_utc);
 // https://httpd.apache.org/docs/2.4/en/logs.html
 // https://httpd.apache.org/docs/2.2/en/mod/mod_log_config.html#formats
 struct AccessLog {
+  AccessLog(boost::string_view remote_addr, boost::string_view remote_ident,
+            boost::string_view user_name, boost::string_view request_time,
+            boost::string_view request_line, unsigned status,
+            std::size_t content_length, boost::string_view referer,
+            boost::string_view user_agent, std::uint64_t serve_duration);
+
   // Remote client ip : %h
   std::string remote_addr_;
   // REMOTE_IDENT : The remote logname, user id : %l
@@ -62,8 +71,6 @@ struct AccessLog {
   // [:data] foramt -> [05/Sep/2018:16:48:09 +0900]
   // ':remote-addr - - [:date] ":method :uri HTTP/:http-version" :status
   // :res[content-length] ":referrer" ":user-agent"'
-  std::string to_string() const;
-
   friend std::ostream& operator<<(std::ostream& os, const AccessLog& accesslog);
 };
 

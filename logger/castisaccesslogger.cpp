@@ -10,12 +10,13 @@ namespace accesslog {
 const std::string kDelimiter = " ";
 const std::string kQuotes = "\"";
 const std::string kEmpty = "-";
-std::string request_line(const std::string& method, const std::string& uri,
+std::string request_line(boost::string_view method, boost::string_view uri,
                          unsigned version_major /* = 1*/,
                          unsigned version_minor /* = 1*/) {
-  return method + accesslog::kDelimiter + uri + accesslog::kDelimiter +
-         "HTTP/" + std::to_string(version_major) + "." +
-         std::to_string(version_minor);
+  std::ostringstream oss;
+  oss << method << accesslog::kDelimiter << uri << accesslog::kDelimiter
+      << "HTTP/" << version_major << "." << version_minor;
+  return oss.str();
 }
 
 std::uint64_t serve_duration(boost::posix_time::ptime req_utc) {
@@ -38,38 +39,73 @@ std::string request_time(boost::posix_time::ptime req_utc) {
 }
 }  // namespace accesslog
 
+AccessLog::AccessLog(boost::string_view remote_addr,
+                     boost::string_view remote_ident,
+                     boost::string_view user_name,
+                     boost::string_view request_time,
+                     boost::string_view request_line, unsigned status,
+                     std::size_t content_length, boost::string_view referer,
+                     boost::string_view user_agent,
+                     std::uint64_t serve_duration)
+    : remote_addr_(remote_addr),
+      remote_ident_(remote_ident),
+      user_name_(user_name),
+      request_time_(request_time),
+      request_line_(request_line),
+      status_(status),
+      content_length_(content_length),
+      referer_(referer),
+      user_agent_(user_agent),
+      serve_duration_(serve_duration) {}
+
 // [:data] foramt -> [05/Sep/2018:16:48:09 +0900]
 // ':remote-addr - - [:date] ":method :uri HTTP/:http-version" :status
 // :res[content-length] ":referrer" ":user-agent"'
-std::string AccessLog::to_string() const {
+std::ostream& operator<<(std::ostream& lhs, const AccessLog& rhs) {
   namespace alog = castis::logger::accesslog;
-  const AccessLog& access = *this;
-  std::string str =
-      (access.remote_addr_.empty() ? alog::kEmpty : access.remote_addr_) +
-      alog::kDelimiter +
-      (access.remote_ident_.empty() ? alog::kEmpty : access.remote_ident_) +
-      alog::kDelimiter +
-      (access.user_name_.empty() ? alog::kEmpty : access.user_name_) +
-      alog::kDelimiter +
-      (access.request_time_.empty() ? alog::kEmpty : access.request_time_) +
-      alog::kDelimiter + alog::kQuotes +
-      (access.request_line_.empty() ? alog::kEmpty : access.request_line_) +
-      alog::kQuotes + alog::kDelimiter +
-      ((access.status_ <= 0) ? alog::kEmpty : std::to_string(access.status_)) +
-      alog::kDelimiter +
-      ((access.content_length_ <= 0) ? alog::kEmpty
-                                     : std::to_string(access.content_length_)) +
-      alog::kDelimiter + alog::kQuotes +
-      (access.referer_.empty() ? alog::kEmpty : access.referer_) +
-      alog::kQuotes + alog::kDelimiter + alog::kQuotes +
-      (access.user_agent_.empty() ? alog::kEmpty : access.user_agent_) +
-      alog::kQuotes;
-  return str;
-}
+  if (rhs.remote_addr_.empty())
+    lhs << alog::kEmpty;
+  else
+    lhs << rhs.remote_addr_;
+  // lhs << (rhs.remote_addr_.empty() ? alog::kEmpty : rhs.remote_addr_);
+  lhs << alog::kDelimiter;
 
-std::ostream& operator<<(std::ostream& strm, const AccessLog& accesslog) {
-  strm << accesslog.to_string();
-  return strm;
+  lhs << (rhs.remote_ident_.empty() ? alog::kEmpty : rhs.remote_ident_);
+  lhs << alog::kDelimiter;
+
+  lhs << (rhs.user_name_.empty() ? alog::kEmpty : rhs.user_name_);
+  lhs << alog::kDelimiter;
+
+  lhs << (rhs.request_time_.empty() ? alog::kEmpty : rhs.request_time_);
+  lhs << alog::kDelimiter;
+
+  lhs << alog::kQuotes;
+  lhs << (rhs.request_line_.empty() ? alog::kEmpty : rhs.request_line_);
+  lhs << alog::kQuotes;
+  lhs << alog::kDelimiter;
+
+  if (rhs.status_ <= 0)
+    lhs << alog::kEmpty;
+  else
+    lhs << rhs.status_;
+  lhs << alog::kDelimiter;
+
+  if (rhs.content_length_ <= 0)
+    lhs << alog::kEmpty;
+  else
+    lhs << rhs.content_length_;
+  lhs << alog::kDelimiter;
+
+  lhs << alog::kQuotes;
+  lhs << (rhs.referer_.empty() ? alog::kEmpty : rhs.referer_);
+  lhs << alog::kQuotes;
+  lhs << alog::kDelimiter;
+
+  lhs << alog::kQuotes;
+  lhs << (rhs.user_agent_.empty() ? alog::kEmpty : rhs.user_agent_);
+  lhs << alog::kQuotes;
+
+  return lhs;
 }
 
 boost::shared_ptr<cilog_async_sink_t> init_access_logger(

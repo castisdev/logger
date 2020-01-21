@@ -15,12 +15,12 @@ int main() {
   f3.push_back(castis::logger::Module("module3", std::set<severity_level>{warning}));
   auto sink3 = castis::logger::init_async_module_logger("example3", "1.0.0", f3, "example3");
 
-  std::vector<castis::logger::Module> f4;
-  f4.push_back(castis::logger::Module(exception));
+  std::vector<std::shared_ptr<castis::logger::Module>> f4;
+  f4.push_back(std::make_shared<castis::logger::Module>(exception));
   auto sink4 = castis::logger::init_async_module_logger("example4", "1.0.0", f4, "example4");
 
-  std::vector<castis::logger::Module> f5;
-  f5.push_back(castis::logger::Module(std::set<severity_level>{info}));
+  std::vector<std::shared_ptr<castis::logger::Module>> f5;
+  f5.push_back(std::make_shared<castis::logger::Module>(std::set<severity_level>{info}));
   auto sink5 = castis::logger::init_async_module_logger("example5", "1.0.0", f5, "example5");
 
   CILOG(foo) << "Just a foo";

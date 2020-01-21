@@ -340,6 +340,57 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
   return sink;
 }
 
+bool func_module_ptr_severity_filter(
+    boost::log::value_ref<std::string> const& ch,
+    boost::log::value_ref<severity_level> const& level,
+    const std::vector<std::shared_ptr<Module>>& modules) {
+  for (const auto& m : modules) {
+    if (m->name_.empty() || m->name_ == ch) {
+      if (m->level_type_ == Module::min_level) {
+        return level >= m->min_level_;
+      } else {
+        return m->specific_levels_.find(level.get()) !=
+               m->specific_levels_.end();
+      }
+    }
+  }
+  return false;
+}
+
+boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
+    const std::string& app_name, const std::string& app_version,
+    const std::vector<std::shared_ptr<Module>>& filters,
+    const std::string& file_name_suffix,
+    const std::string& target /* = "./log"*/,
+    int64_t rotation_size /* = 100 * 100 * 1024*/,
+    bool auto_flush /* = true*/) {
+  namespace expr = boost::log::expressions;
+  boost::log::add_common_attributes();
+
+  std::vector<boost::shared_ptr<cilog_async_sink_t>> sinks;
+  auto backend = boost::make_shared<cilog_backend>(
+      boost::filesystem::path(target), file_name_suffix, rotation_size,
+      auto_flush);
+
+  auto sink = boost::make_shared<cilog_async_sink_t>(backend);
+  sink->set_formatter(expr::stream
+                      << app_name << "," << app_version << ","
+                      << expr::format_date_time<boost::posix_time::ptime>(
+                             "TimeStamp", "%Y-%m-%d,%H:%M:%S.%f")
+                      << ","
+                      << expr::attr<severity_level, severity_tag>("Severity")
+                      << "," << expr::smessage);
+
+  sink->set_filter(boost::phoenix::bind(
+      &func_module_ptr_severity_filter, expr::attr<std::string>("Channel"),
+      expr::attr<severity_level>("Severity"), filters));
+
+  boost::log::core::get()->add_sink(sink);
+  sinks.push_back(sink);
+
+  return sink;
+}
+
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
     const std::string& app_name, const std::string& app_version,
     const std::string& target /* = "./log"*/,
