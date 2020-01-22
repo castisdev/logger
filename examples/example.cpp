@@ -30,13 +30,6 @@ int main() {
   CILOG(report, "strings({:s}), integers({:d}), float numbers({:.2f})...",
                  "abc", 1, 3.1415);
 
-  try {
-    CILOG(report, "exception: strings({:s})...", 1234);
-  } catch (fmt::format_error& e) {
-    std::cerr << "exception caused, " << e.what() << "\n";
-    CILOG(exception, "exception caused, {}", e.what());
-  }
-
   for (int i = 0; i < 1000000; ++i) {
     CILOG(info) << i << "th log with some message";
   }

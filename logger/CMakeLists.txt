@@ -4,7 +4,6 @@ project(${PROJECT_NAME})
 find_package(Boost)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 17)
 
 set(SRCS
 castisaccesslogger.cpp

@@ -14,7 +14,7 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/regex_fwd.hpp>
-#include "fmt/core.h"
+#include "fmt/format.h"
 
 #define CASTIS_CILOG_DEFAULT_MODULUE "default"
 
@@ -32,7 +32,7 @@
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)           \
       << boost::filesystem::path(__FILE__).filename().string()                 \
       << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << "," \
-      << fmt::format(fmt_str, ##__VA_ARGS__)
+      << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 #define CILOG(...)                                                             \
   BOOST_PP_IF(BOOST_PP_EQUAL(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), 1), CILOG_1, \
@@ -50,7 +50,7 @@
                         severity)                                          \
       << boost::filesystem::path(__FILE__).filename().string()             \
       << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"                   \
-      << fmt::format(fmt_str, ##__VA_ARGS__)
+      << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 enum severity_level {
   foo,
