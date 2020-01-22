@@ -6,6 +6,8 @@ find_package(Boost 1.56 COMPONENTS log log_setup thread filesystem system regex 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
 
+option(LOGGER_BUILD_FMT "Enable fmt" ON)
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
 include(cotire)
 
@@ -18,3 +20,7 @@ include_directories(
 add_subdirectory(logger)
 add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(unittest EXCLUDE_FROM_ALL)
+
+if (LOGGER_BUILD_FMT)
+  add_subdirectory(submodules/fmt)
+endif()
