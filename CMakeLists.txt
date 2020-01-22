@@ -18,4 +18,3 @@ include_directories(
 add_subdirectory(logger)
 add_subdirectory(examples EXCLUDE_FROM_ALL)
 add_subdirectory(unittest EXCLUDE_FROM_ALL)
-add_subdirectory(submodules/fmt EXCLUDE_FROM_ALL)

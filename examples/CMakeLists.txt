@@ -37,3 +37,5 @@ else(WIN32)
   add_definitions(-Wall -g -Os)
   target_link_libraries(example_access castislogger fmt::fmt ${Boost_LIBRARIES} pthread rt)
 endif(WIN32)
+
+add_subdirectory(../submodules/fmt ../build/submodules/fmt)
