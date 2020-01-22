@@ -14,6 +14,7 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/regex_fwd.hpp>
+// https://github.com/fmtlib/fmt
 #include "fmt/format.h"
 
 #define CASTIS_CILOG_DEFAULT_MODULUE "default"
@@ -28,7 +29,7 @@
       << boost::filesystem::path(__FILE__).filename().string()       \
       << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << ","
 
-#define CIMLOG_3(module_name, severity, fmt_str, ...)                           \
+#define CIMLOG_3(module_name, severity, fmt_str, ...)                          \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)           \
       << boost::filesystem::path(__FILE__).filename().string()                 \
       << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << "," \
@@ -45,7 +46,7 @@
       << boost::filesystem::path(__FILE__).filename().string()             \
       << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
 
-#define CILOG_2(severity, fmt_str, ...)                                     \
+#define CILOG_2(severity, fmt_str, ...)                                    \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
       << boost::filesystem::path(__FILE__).filename().string()             \

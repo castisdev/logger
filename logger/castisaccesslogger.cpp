@@ -13,10 +13,10 @@ const std::string kEmpty = "-";
 std::string request_line(boost::string_view method, boost::string_view uri,
                          unsigned version_major /* = 1*/,
                          unsigned version_minor /* = 1*/) {
-  std::ostringstream oss;
-  oss << method << accesslog::kDelimiter << uri << accesslog::kDelimiter
-      << "HTTP/" << version_major << "." << version_minor;
-  return oss.str();
+  return fmt::format(FMT_STRING("{}{}{}{}HTTP/{}.{}"),
+                     std::string_view(method.data(), method.length()),
+                     kDelimiter, std::string_view(uri.data(), uri.length()),
+                     kDelimiter, version_major, version_minor);
 }
 
 std::uint64_t serve_duration(boost::posix_time::ptime req_utc) {
