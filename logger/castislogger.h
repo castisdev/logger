@@ -17,6 +17,20 @@
 // https://github.com/fmtlib/fmt
 #include "fmt/format.h"
 
+constexpr const char* cilogger_str_end(const char* str) {
+  return *str ? cilogger_str_end(str + 1) : str;
+}
+constexpr bool cilogger_str_slant(const char* str) {
+  return *str == '/' ? true : (*str ? cilogger_str_slant(str + 1) : false);
+}
+constexpr const char* cilogger_r_slant(const char* str) {
+  return *str == '/' ? (str + 1) : cilogger_r_slant(str - 1);
+}
+constexpr const char* cilogger_file_name(const char* str) {
+  return cilogger_str_slant(str) ? cilogger_r_slant(cilogger_str_end(str))
+                                 : str;
+}
+
 #define CASTIS_CILOG_DEFAULT_MODULUE "default"
 
 #define CIMLOG(...)                                                   \
@@ -26,13 +40,13 @@
 
 #define CIMLOG_2(module_name, severity)                              \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity) \
-      << boost::filesystem::path(__FILE__).filename().string()       \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << ","
+      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":" \
+      << __LINE__ << "," << #module_name << ","
 
-#define CIMLOG_3(module_name, severity, fmt_str, ...)                          \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)           \
-      << boost::filesystem::path(__FILE__).filename().string()                 \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << "," << #module_name << "," \
+#define CIMLOG_3(module_name, severity, fmt_str, ...)                \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity) \
+      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":" \
+      << __LINE__ << "," << #module_name << ","                      \
       << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 #define CILOG(...)                                                             \
@@ -43,15 +57,14 @@
 #define CILOG_1(severity)                                                  \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
-      << boost::filesystem::path(__FILE__).filename().string()             \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"
+      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":"       \
+      << __LINE__ << ",,"
 
 #define CILOG_2(severity, fmt_str, ...)                                    \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
-      << boost::filesystem::path(__FILE__).filename().string()             \
-      << "::" << __FUNCTION__ << ":" << __LINE__ << ",,"                   \
-      << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
+      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":"       \
+      << __LINE__ << ",," << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 enum severity_level {
   foo,
