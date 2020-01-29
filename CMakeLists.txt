@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 set(PROJECT_NAME awsome_example)
 project(${PROJECT_NAME})
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.56 COMPONENTS log log_setup thread filesystem system regex date_time chrono REQUIRED)
+find_package(Boost 1.56 COMPONENTS log log_setup regex REQUIRED)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
 

@@ -1,6 +1,5 @@
 #include "logger/castisaccesslogger.h"
 
-#include <boost/filesystem.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
@@ -114,7 +113,7 @@ boost::shared_ptr<cilog_async_sink_t> init_access_logger(
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   auto backend = boost::make_shared<cilog_backend>(
-      boost::filesystem::path(target), file_name, rotation_size, true);
+      std::filesystem::path(target), file_name, rotation_size, true);
   auto sink = boost::make_shared<cilog_async_sink_t>(backend);
 
   // NCSA Combined Log Format

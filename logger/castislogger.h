@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/log/sinks/async_frontend.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/record_ostream.hpp>
@@ -90,15 +90,15 @@ class cilog_date_hour_backend
           char, boost::log::sinks::synchronized_feeding> {
  private:
   bool auto_flush_{};
-  boost::filesystem::ofstream file_;
-  boost::filesystem::path target_path_;
-  boost::filesystem::path file_path_;
+  std::ofstream file_;
+  std::filesystem::path target_path_;
+  std::filesystem::path file_path_;
   std::string file_name_suffix_;
   std::string file_name_prefix_format_;
   std::string current_date_hour_;
 
  public:
-  cilog_date_hour_backend(boost::filesystem::path const& target_path,
+  cilog_date_hour_backend(std::filesystem::path const& target_path,
                           std::string const& file_name_suffix,
                           std::string const& file_name_prefix_format,
                           bool auto_flush);
@@ -107,7 +107,7 @@ class cilog_date_hour_backend
 
  private:
   void rotate_file();
-  boost::filesystem::path generate_filepath();
+  std::filesystem::path generate_filepath();
   std::string datetime_string_with_format(std::string const& format);
   std::string get_current_date_hour();
 };
@@ -116,16 +116,16 @@ class cilog_backend : public boost::log::sinks::basic_formatted_sink_backend<
                           char, boost::log::sinks::synchronized_feeding> {
  private:
   bool auto_flush_{};
-  boost::filesystem::ofstream file_;
-  boost::filesystem::path target_path_;
-  boost::filesystem::path file_path_;
+  std::ofstream file_;
+  std::filesystem::path target_path_;
+  std::filesystem::path file_path_;
   std::string file_name_suffix_;
   uintmax_t rotation_size_{};
   uintmax_t characters_written_{};
   boost::gregorian::date current_date_;
 
  public:
-  cilog_backend(boost::filesystem::path const& target_path,
+  cilog_backend(std::filesystem::path const& target_path,
                 std::string const& file_name_suffix, uintmax_t rotation_size,
                 bool auto_flush);
   void consume(boost::log::record_view const& /*rec*/,
@@ -133,9 +133,9 @@ class cilog_backend : public boost::log::sinks::basic_formatted_sink_backend<
 
  private:
   void rotate_file();
-  boost::filesystem::path generate_filepath();
+  std::filesystem::path generate_filepath();
   std::string datetime_string_with_format(std::string const& format);
-  uintmax_t scan_next_index(boost::filesystem::path const& path,
+  uintmax_t scan_next_index(std::filesystem::path const& path,
                             boost::regex const& pattern);
   uintmax_t parse_index(std::string const& filename);
 };
