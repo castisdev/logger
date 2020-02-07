@@ -1,10 +1,14 @@
 #include "logger/castislogger.h"
 
+#include <boost/algorithm/string.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/phoenix/bind/bind_function.hpp>
-#include <boost/regex.hpp>
+#include "fmt/chrono.h"
+
+namespace fs = std::filesystem;
+namespace alg = boost::algorithm;
 
 // The operator is used when putting the severity level to log
 boost::log::formatting_ostream& operator<<(
@@ -24,14 +28,18 @@ boost::log::formatting_ostream& operator<<(
 }
 
 cilog_date_hour_backend::cilog_date_hour_backend(
-    std::filesystem::path const& target_path,
-    std::string const& file_name_suffix,
-    std::string const& file_name_prefix_format, bool auto_flush)
+    std::filesystem::path const& target_path, std::string_view file_name_suffix,
+    std::string_view file_name_prefix_format, bool auto_flush)
     : auto_flush_(auto_flush),
       target_path_(target_path),
       file_name_suffix_(file_name_suffix),
       file_name_prefix_format_(file_name_prefix_format),
-      current_date_hour_(get_current_date_hour()) {}
+      current_date_hour_(get_current_date_hour()) {
+  if (alg::starts_with(file_name_prefix_format_, "{:") == false ||
+      alg::ends_with(file_name_prefix_format_, "|") == false) {
+    file_name_prefix_format_ = "{:" + file_name_prefix_format_ + "}";
+  }
+}
 
 void cilog_date_hour_backend::consume(boost::log::record_view const& /*rec*/,
                                       string_type const& formatted_message) {
@@ -41,7 +49,7 @@ void cilog_date_hour_backend::consume(boost::log::record_view const& /*rec*/,
 
   if (!file_.is_open()) {
     file_path_ = generate_filepath();
-    std::filesystem::create_directories(file_path_.parent_path());
+    fs::create_directories(file_path_.parent_path());
     file_.open(file_path_, std::ofstream::out | std::ofstream::app);
     if (!file_.is_open()) {
       // failed to open file
@@ -51,10 +59,9 @@ void cilog_date_hour_backend::consume(boost::log::record_view const& /*rec*/,
     auto link_filepath =
         file_path_.parent_path().parent_path() / (file_name_suffix_ + ".log");
     std::error_code ec;
-    std::filesystem::remove(link_filepath, ec);
+    fs::remove(link_filepath, ec);
     if (!ec) {
-      std::filesystem::create_symlink(std::filesystem::absolute(file_path_),
-                                      link_filepath, ec);
+      fs::create_symlink(fs::absolute(file_path_), link_filepath, ec);
     }
   }
   file_.write(formatted_message.data(),
@@ -77,40 +84,33 @@ void cilog_date_hour_backend::rotate_file() {
 
 std::filesystem::path cilog_date_hour_backend::generate_filepath() {
   if (file_name_prefix_format_.empty())
-    file_name_prefix_format_ = "%Y-%m-%d[%H]";
-  std::string filename_prefix =
-      datetime_string_with_format(file_name_prefix_format_);
-  std::string monthly_path_name = datetime_string_with_format("%Y-%m");
+    file_name_prefix_format_ = "{:%Y-%m-%d[%H]}";
+  auto filename_prefix = datetime_string_with_format(file_name_prefix_format_);
+  auto monthly_path_name = datetime_string_with_format("{:%Y-%m}");
 
-  std::filesystem::path monthly_path(target_path_ / monthly_path_name);
+  auto monthly_path = target_path_ / monthly_path_name;
 
   // e.g. 2014-08-12[1]_example.log
-  std::stringstream filename_ss;
-  filename_ss << filename_prefix;
-  filename_ss << "_" + file_name_suffix_;
-  filename_ss << ".log";
-
-  return std::filesystem::path(monthly_path / filename_ss.str());
+  auto filename = fmt::format("{}_{}.log", filename_prefix, file_name_suffix_);
+  return monthly_path / filename;
 }
 
 std::string cilog_date_hour_backend::datetime_string_with_format(
-    std::string const& format) {
-  std::locale loc(std::cout.getloc(),
-                  new boost::posix_time::time_facet(format.c_str()));
-  std::stringstream ss;
-  ss.imbue(loc);
-  ss << boost::posix_time::second_clock::local_time();
-  return ss.str();
+    std::string_view format) {
+  auto now = std::time(nullptr);
+  tm tm;
+  boost::date_time::c_time::localtime(&now, &tm);
+  return fmt::format(format, tm);
 }
 
 std::string cilog_date_hour_backend::get_current_date_hour() {
-  return datetime_string_with_format("%Y-%m-%d %H");
+  return datetime_string_with_format("{:%Y-%m-%d %H}");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 cilog_backend::cilog_backend(std::filesystem::path const& target_path,
-                             std::string const& file_name_suffix,
+                             std::string_view file_name_suffix,
                              uintmax_t rotation_size, bool auto_flush)
     : auto_flush_(auto_flush),
       target_path_(target_path),
@@ -127,7 +127,7 @@ void cilog_backend::consume(boost::log::record_view const& /*rec*/,
 
   if (!file_.is_open()) {
     file_path_ = generate_filepath();
-    std::filesystem::create_directories(file_path_.parent_path());
+    fs::create_directories(file_path_.parent_path());
     file_.open(file_path_, std::ofstream::out | std::ofstream::app);
     if (!file_.is_open()) {
       // failed to open file
@@ -138,10 +138,9 @@ void cilog_backend::consume(boost::log::record_view const& /*rec*/,
     auto link_filepath =
         file_path_.parent_path().parent_path() / (file_name_suffix_ + ".log");
     std::error_code ec;
-    std::filesystem::remove(link_filepath, ec);
+    fs::remove(link_filepath, ec);
     if (!ec) {
-      std::filesystem::create_symlink(std::filesystem::absolute(file_path_),
-                                      link_filepath, ec);
+      fs::create_symlink(fs::absolute(file_path_), link_filepath, ec);
     }
   }
   file_.write(formatted_message.data(),
@@ -165,54 +164,51 @@ void cilog_backend::rotate_file() {
 }
 
 std::filesystem::path cilog_backend::generate_filepath() {
-  std::string filename_prefix = datetime_string_with_format("%Y-%m-%d");
-  std::string monthly_path_name = datetime_string_with_format("%Y-%m");
+  auto filename_prefix = datetime_string_with_format("{:%Y-%m-%d}");
+  auto monthly_path_name = datetime_string_with_format("{:%Y-%m}");
 
-  std::filesystem::path monthly_path(target_path_ / monthly_path_name);
+  auto monthly_path = target_path_ / monthly_path_name;
   // e.g. 2014-08-12[1]_example.log
-  boost::regex pattern(filename_prefix + "(\\[[0-9]+\\])?" + "_" +
-                       file_name_suffix_ + ".log");
-  uintmax_t next_index = scan_next_index(monthly_path, pattern);
+  std::regex pattern(filename_prefix + "(\\[[0-9]+\\])?" + "_" +
+                     file_name_suffix_ + ".log");
+  auto next_index = scan_next_index(monthly_path, pattern);
 
-  std::stringstream filename_ss;
-  filename_ss << filename_prefix;
-  if (next_index > 0) {
-    filename_ss << "[" << next_index << "]";
-  }
-  filename_ss << "_" + file_name_suffix_;
-  filename_ss << ".log";
+  auto filename =
+      (next_index > 0)
+          ? fmt::format("{}[{}]_{}.log", filename_prefix, next_index,
+                        file_name_suffix_)
+          : fmt::format("{}_{}.log", filename_prefix, file_name_suffix_);
 
-  return std::filesystem::path(monthly_path / filename_ss.str());
+  return monthly_path / filename;
 }
 
 std::string cilog_backend::datetime_string_with_format(
-    std::string const& format) {
-  std::locale loc(std::cout.getloc(),
-                  new boost::posix_time::time_facet(format.c_str()));
-  std::stringstream ss;
-  ss.imbue(loc);
-  ss << boost::posix_time::second_clock::local_time();
-  return ss.str();
+    std::string_view format) {
+  auto now = std::time(nullptr);
+  tm tm;
+  boost::date_time::c_time::localtime(&now, &tm);
+  return fmt::format(format, tm);
 }
 
 uintmax_t cilog_backend::scan_next_index(std::filesystem::path const& path,
-                                         boost::regex const& pattern) {
+                                         std::regex const& pattern) {
   uintmax_t current_index = 0;
-  std::filesystem::path current_fs;
-  if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-    std::filesystem::directory_iterator it(path), end;
-    for (; it != end; ++it) {
-      if (boost::regex_match(it->path().filename().string(), pattern)) {
-        uintmax_t index = parse_index(it->path().filename().string());
+  fs::path current_fs;
+  if (fs::exists(path) && fs::is_directory(path)) {
+    for (const auto& entry : fs::directory_iterator(path)) {
+      const auto& p = entry.path();
+      auto filename = p.filename().string();
+      if (std::regex_match(filename, pattern)) {
+        uintmax_t index = parse_index(filename);
         if (index >= current_index) {
           current_index = index;
-          current_fs = it->path();
+          current_fs = p;
         }
       }
     }
   }
   std::error_code ec;
-  uintmax_t filesize = std::filesystem::file_size(current_fs, ec);
+  auto filesize = fs::file_size(current_fs, ec);
   if (!ec) {
     if (filesize >= rotation_size_) {
       ++current_index;
@@ -222,8 +218,8 @@ uintmax_t cilog_backend::scan_next_index(std::filesystem::path const& path,
 }
 
 uintmax_t cilog_backend::parse_index(std::string const& filename) {
-  size_t pos_index_begin = filename.find('[');
-  size_t pos_index_end = filename.find(']');
+  auto pos_index_begin = filename.find('[');
+  auto pos_index_end = filename.find(']');
   unsigned int index = 0;
   if (pos_index_begin != std::string::npos &&
       pos_index_end != std::string::npos) {
@@ -244,8 +240,8 @@ void init_logger(const std::string& app_name, const std::string& app_version,
                  bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  auto backend = boost::make_shared<cilog_backend>(
-      std::filesystem::path(target), app_name, rotation_size, auto_flush);
+  auto backend = boost::make_shared<cilog_backend>(fs::path(target), app_name,
+                                                   rotation_size, auto_flush);
 
   auto sink = boost::make_shared<cilog_sync_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -269,8 +265,8 @@ boost::shared_ptr<cilog_async_sink_t> init_async_logger(
     bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
-  auto backend = boost::make_shared<cilog_backend>(
-      std::filesystem::path(target), app_name, rotation_size, auto_flush);
+  auto backend = boost::make_shared<cilog_backend>(fs::path(target), app_name,
+                                                   rotation_size, auto_flush);
 
   auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -316,8 +312,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
 
   std::vector<boost::shared_ptr<cilog_async_sink_t>> sinks;
   auto backend = boost::make_shared<cilog_backend>(
-      std::filesystem::path(target), file_name_suffix, rotation_size,
-      auto_flush);
+      fs::path(target), file_name_suffix, rotation_size, auto_flush);
 
   auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -367,8 +362,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
 
   std::vector<boost::shared_ptr<cilog_async_sink_t>> sinks;
   auto backend = boost::make_shared<cilog_backend>(
-      std::filesystem::path(target), file_name_suffix, rotation_size,
-      auto_flush);
+      fs::path(target), file_name_suffix, rotation_size, auto_flush);
 
   auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -397,8 +391,7 @@ boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   auto backend = boost::make_shared<cilog_date_hour_backend>(
-      std::filesystem::path(target), app_name, file_name_prefix_format,
-      auto_flush);
+      fs::path(target), app_name, file_name_prefix_format, auto_flush);
 
   auto sink = boost::make_shared<cilog_date_hour_async_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -437,8 +430,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   auto backend = boost::make_shared<cilog_backend>(
-      std::filesystem::path(target), file_name_suffix, rotation_size,
-      auto_flush);
+      fs::path(target), file_name_suffix, rotation_size, auto_flush);
 
   auto sink = boost::make_shared<cilog_async_sink_t>(backend);
   sink->set_formatter(expr::stream
@@ -471,8 +463,7 @@ init_async_date_hour_level_logger(
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   auto backend = boost::make_shared<cilog_date_hour_backend>(
-      std::filesystem::path(target), file_name_suffix, file_name_prefix_format,
-      auto_flush);
+      fs::path(target), file_name_suffix, file_name_prefix_format, auto_flush);
 
   auto sink = boost::make_shared<cilog_date_hour_async_sink_t>(backend);
   sink->set_formatter(expr::stream

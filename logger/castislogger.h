@@ -4,7 +4,9 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/log/sinks/async_frontend.hpp>
@@ -13,7 +15,6 @@
 #include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/utility/setup/file.hpp>
-#include <boost/regex_fwd.hpp>
 // https://github.com/fmtlib/fmt
 #include "fmt/format.h"
 
@@ -99,8 +100,8 @@ class cilog_date_hour_backend
 
  public:
   cilog_date_hour_backend(std::filesystem::path const& target_path,
-                          std::string const& file_name_suffix,
-                          std::string const& file_name_prefix_format,
+                          std::string_view file_name_suffix,
+                          std::string_view file_name_prefix_format,
                           bool auto_flush);
   void consume(boost::log::record_view const& /*rec*/,
                string_type const& formatted_message);
@@ -108,7 +109,7 @@ class cilog_date_hour_backend
  private:
   void rotate_file();
   std::filesystem::path generate_filepath();
-  std::string datetime_string_with_format(std::string const& format);
+  std::string datetime_string_with_format(std::string_view format);
   std::string get_current_date_hour();
 };
 
@@ -126,7 +127,7 @@ class cilog_backend : public boost::log::sinks::basic_formatted_sink_backend<
 
  public:
   cilog_backend(std::filesystem::path const& target_path,
-                std::string const& file_name_suffix, uintmax_t rotation_size,
+                std::string_view file_name_suffix, uintmax_t rotation_size,
                 bool auto_flush);
   void consume(boost::log::record_view const& /*rec*/,
                string_type const& formatted_message);
@@ -134,9 +135,9 @@ class cilog_backend : public boost::log::sinks::basic_formatted_sink_backend<
  private:
   void rotate_file();
   std::filesystem::path generate_filepath();
-  std::string datetime_string_with_format(std::string const& format);
+  std::string datetime_string_with_format(std::string_view format);
   uintmax_t scan_next_index(std::filesystem::path const& path,
-                            boost::regex const& pattern);
+                            std::regex const& pattern);
   uintmax_t parse_index(std::string const& filename);
 };
 
@@ -203,7 +204,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
     const std::string& app_name, const std::string& app_version,
     const std::string& target = "./log",
-    const std::string& file_name_prefix_format = "%Y-%m-%d[%H]",
+    const std::string& file_name_prefix_format = "{:%Y-%m-%d[%H]}",
     bool auto_flush = true);
 
 bool func_severity_filter(boost::log::value_ref<severity_level> const& level,
@@ -220,7 +221,7 @@ init_async_date_hour_level_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<severity_level> severity_levels,
     const std::string& file_name_suffix, const std::string& target = "./log",
-    const std::string& file_name_prefix_format = "%Y-%m-%d[%H]",
+    const std::string& file_name_prefix_format = "{:%Y-%m-%d[%H]}",
     bool auto_flush = true);
 
 template <typename Sink>
