@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/syscall.h>
+
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -42,12 +44,12 @@ constexpr const char* cilogger_file_name(const char* str) {
 #define CIMLOG_2(module_name, severity)                              \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity) \
       << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":" \
-      << __LINE__ << "," << #module_name << ","
+      << __LINE__ << ":" << syscall(SYS_gettid) << "," << #module_name << ","
 
-#define CIMLOG_3(module_name, severity, fmt_str, ...)                \
-  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity) \
-      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":" \
-      << __LINE__ << "," << #module_name << ","                      \
+#define CIMLOG_3(module_name, severity, fmt_str, ...)                         \
+  BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), #module_name, severity)          \
+      << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":"          \
+      << __LINE__ << ":" << syscall(SYS_gettid) << "," << #module_name << "," \
       << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 #define CILOG(...)                                                             \
@@ -59,13 +61,14 @@ constexpr const char* cilogger_file_name(const char* str) {
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
       << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":"       \
-      << __LINE__ << ",,"
+      << __LINE__ << ":" << syscall(SYS_gettid) << ",,"
 
 #define CILOG_2(severity, fmt_str, ...)                                    \
   BOOST_LOG_CHANNEL_SEV(ChanelLogger::get(), CASTIS_CILOG_DEFAULT_MODULUE, \
                         severity)                                          \
       << cilogger_file_name(__FILE__) << "::" << __FUNCTION__ << ":"       \
-      << __LINE__ << ",," << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
+      << __LINE__ << ":" << syscall(SYS_gettid) << ",,"                    \
+      << fmt::format(FMT_STRING(fmt_str), ##__VA_ARGS__)
 
 enum severity_level {
   foo,
