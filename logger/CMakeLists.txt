@@ -11,4 +11,3 @@ castislogger.cpp
 )
 
 add_library(${PROJECT_NAME} ${SRCS})
-cotire(${PROJECT_NAME})

@@ -8,9 +8,6 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(LOGGER_BUILD_FMT "Enable fmt" ON)
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
-include(cotire)
-
 include_directories(
   SYSTEM ${Boost_INCLUDE_DIRS}
   submodules/fmt/include
