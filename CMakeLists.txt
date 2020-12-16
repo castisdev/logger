@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required (VERSION 3.16.0)
 set(PROJECT_NAME awsome_example)
 project(${PROJECT_NAME})
 set(Boost_USE_STATIC_LIBS ON)
