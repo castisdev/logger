@@ -109,7 +109,7 @@ std::ostream& operator<<(std::ostream& lhs, const AccessLog& rhs) {
 
 boost::shared_ptr<cilog_async_sink_t> init_access_logger(
     const std::string& file_name, const std::string& target /* = "./log"*/,
-    int64_t rotation_size /* = 100 * 100 * 1024*/) {
+    int64_t rotation_size /* = 10 * 1024 * 1024*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
   auto backend = boost::make_shared<cilog_backend>(

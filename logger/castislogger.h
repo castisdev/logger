@@ -153,13 +153,13 @@ using cilog_date_hour_async_sink_t =
 
 void init_logger(const std::string& app_name, const std::string& app_version,
                  const std::string& target = "./log",
-                 int64_t rotation_size = 100 * 100 * 1024,
+                 int64_t rotation_size = 10 * 1024 * 1024,
                  bool auto_flush = true);
 
 boost::shared_ptr<cilog_async_sink_t> init_async_logger(
     const std::string& app_name, const std::string& app_version,
     const std::string& target = "./log",
-    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
+    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 struct Module {
   enum { min_level, specific_level };
@@ -191,7 +191,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<Module>& filters, const std::string& file_name_suffix,
     const std::string& target = "./log",
-    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
+    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 bool func_module_ptr_severity_filter(
     boost::log::value_ref<std::string> const& ch,
@@ -202,7 +202,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<std::shared_ptr<Module>>& filters,
     const std::string& file_name_suffix, const std::string& target = "./log",
-    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
+    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
     const std::string& app_name, const std::string& app_version,
@@ -217,7 +217,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<severity_level> severity_levels,
     const std::string& file_name_suffix, const std::string& target = "./log",
-    int64_t rotation_size = 100 * 100 * 1024, bool auto_flush = true);
+    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 boost::shared_ptr<cilog_date_hour_async_sink_t>
 init_async_date_hour_level_logger(

@@ -8,7 +8,6 @@
 #include "fmt/chrono.h"
 
 namespace fs = std::filesystem;
-namespace alg = boost::algorithm;
 
 // The operator is used when putting the severity level to log
 boost::log::formatting_ostream& operator<<(
@@ -35,8 +34,8 @@ cilog_date_hour_backend::cilog_date_hour_backend(
       file_name_suffix_(file_name_suffix),
       file_name_prefix_format_(file_name_prefix_format),
       current_date_hour_(get_current_date_hour()) {
-  if (alg::starts_with(file_name_prefix_format_, "{:") == false ||
-      alg::ends_with(file_name_prefix_format_, "|") == false) {
+  if (boost::starts_with(file_name_prefix_format_, "{:") == false ||
+      boost::ends_with(file_name_prefix_format_, "|") == false) {
     file_name_prefix_format_ = "{:" + file_name_prefix_format_ + "}";
   }
 }
@@ -236,7 +235,7 @@ namespace castis {
 namespace logger {
 void init_logger(const std::string& app_name, const std::string& app_version,
                  const std::string& target /* = "./log"*/,
-                 int64_t rotation_size /* = 100 * 100 * 1024*/,
+                 int64_t rotation_size /* = 10 * 1024 * 1024*/,
                  bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
@@ -261,7 +260,7 @@ void init_logger(const std::string& app_name, const std::string& app_version,
 boost::shared_ptr<cilog_async_sink_t> init_async_logger(
     const std::string& app_name, const std::string& app_version,
     const std::string& target /* = "./log"*/,
-    int64_t rotation_size /* = 100 * 100 * 1024*/,
+    int64_t rotation_size /* = 10 * 1024 * 1024*/,
     bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
@@ -305,7 +304,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
     const std::string& app_name, const std::string& app_version,
     const std::vector<Module>& filters, const std::string& file_name_suffix,
     const std::string& target /* = "./log"*/,
-    int64_t rotation_size /* = 100 * 100 * 1024*/,
+    int64_t rotation_size /* = 10 * 1024 * 1024*/,
     bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
@@ -355,7 +354,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
     const std::vector<std::shared_ptr<Module>>& filters,
     const std::string& file_name_suffix,
     const std::string& target /* = "./log"*/,
-    int64_t rotation_size /* = 100 * 100 * 1024*/,
+    int64_t rotation_size /* = 10 * 1024 * 1024*/,
     bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();
@@ -425,7 +424,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
     const std::vector<severity_level> severity_levels,
     const std::string& file_name_suffix,
     const std::string& target /* = "./log"*/,
-    int64_t rotation_size /* = 100 * 100 * 1024*/,
+    int64_t rotation_size /* = 10 * 1024 * 1024*/,
     bool auto_flush /* = true*/) {
   namespace expr = boost::log::expressions;
   boost::log::add_common_attributes();

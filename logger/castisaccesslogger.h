@@ -78,7 +78,7 @@ std::ostream& operator<<(std::ostream& strm, const AccessLog& accesslog);
 
 boost::shared_ptr<cilog_async_sink_t> init_access_logger(
     const std::string& file_name, const std::string& target = "./log",
-    int64_t rotation_size = 100 * 100 * 1024);
+    int64_t rotation_size = 10 * 1024 * 1024);
 
 }  // namespace logger
 }  // namespace castis
