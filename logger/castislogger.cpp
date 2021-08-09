@@ -289,7 +289,7 @@ bool func_module_severity_filter(
     boost::log::value_ref<severity_level> const& level,
     const std::vector<Module>& modules) {
   for (const auto& m : modules) {
-    if (m.name_.empty() || m.name_ == ch) {
+    if (m.name_ == ch || (m.name_.empty() && ch != "access")) {
       if (m.level_type_ == Module::min_level) {
         return level >= m.min_level_;
       } else {
@@ -337,7 +337,7 @@ bool func_module_ptr_severity_filter(
     boost::log::value_ref<severity_level> const& level,
     const std::vector<std::shared_ptr<Module>>& modules) {
   for (const auto& m : modules) {
-    if (m->name_.empty() || m->name_ == ch) {
+    if (m->name_ == ch || (m->name_.empty() && ch != "access")) {
       if (m->level_type_ == Module::min_level) {
         return level >= m->min_level_;
       } else {
