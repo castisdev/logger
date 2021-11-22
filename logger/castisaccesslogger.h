@@ -1,7 +1,8 @@
 #pragma once
 
+#include <string_view>
+
 #include <boost/log/utility/manipulators/add_value.hpp>
-#include <boost/utility/string_view.hpp>
 
 #include "castislogger.h"
 
@@ -30,7 +31,7 @@ namespace castis {
 namespace logger {
 namespace accesslog {
 
-std::string request_line(boost::string_view method, boost::string_view uri,
+std::string request_line(std::string_view method, std::string_view uri,
                          unsigned version_major = 1,
                          unsigned version_minor = 1);
 std::uint64_t serve_duration(boost::posix_time::ptime req_utc);
@@ -41,30 +42,30 @@ std::string request_time(boost::posix_time::ptime req_utc);
 // https://httpd.apache.org/docs/2.4/en/logs.html
 // https://httpd.apache.org/docs/2.2/en/mod/mod_log_config.html#formats
 struct AccessLog {
-  AccessLog(boost::string_view remote_addr, boost::string_view remote_ident,
-            boost::string_view user_name, boost::string_view request_time,
-            boost::string_view request_line, unsigned status,
-            std::size_t content_length, boost::string_view referer,
-            boost::string_view user_agent, std::uint64_t serve_duration);
+  AccessLog(std::string_view remote_addr, std::string_view remote_ident,
+            std::string_view user_name, std::string_view request_time,
+            std::string_view request_line, unsigned status,
+            std::size_t content_length, std::string_view referer,
+            std::string_view user_agent, std::uint64_t serve_duration);
 
   // Remote client ip : %h
-  std::string remote_addr_;
+  std::string_view remote_addr_;
   // REMOTE_IDENT : The remote logname, user id : %l
-  std::string remote_ident_;
+  std::string_view remote_ident_;
   // The name of the authenticated remote user : %u
-  std::string user_name_;
+  std::string_view user_name_;
   // Request time : Date and time of the request : %t
-  std::string request_time_;
+  std::string_view request_time_;
   // The first line of the request. Example: GET / HTTP/1.0 : %r
-  std::string request_line_;
+  std::string_view request_line_;
   // Final status code of http response : %>s
   unsigned status_;
   // Content-Length of http response : %b
   std::size_t content_length_;
   // Referer of http req header : %{Referer}i
-  std::string referer_;
+  std::string_view referer_;
   // User-Agent of http req heder : %{User-agent}i
-  std::string user_agent_;
+  std::string_view user_agent_;
   // The time taken to serve the request, in microseconds : %D
   std::uint64_t serve_duration_;
 

@@ -151,22 +151,22 @@ using cilog_async_sink_t = boost::log::sinks::asynchronous_sink<cilog_backend>;
 using cilog_date_hour_async_sink_t =
     boost::log::sinks::asynchronous_sink<cilog_date_hour_backend>;
 
-void init_logger(const std::string& app_name, const std::string& app_version,
-                 const std::string& target = "./log",
+void init_logger(std::string_view app_name, std::string_view app_version,
+                 std::string_view target = "./log",
                  int64_t rotation_size = 10 * 1024 * 1024,
                  bool auto_flush = true);
 
 boost::shared_ptr<cilog_async_sink_t> init_async_logger(
-    const std::string& app_name, const std::string& app_version,
-    const std::string& target = "./log",
-    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
+    std::string_view app_name, std::string_view app_version,
+    std::string_view target = "./log", int64_t rotation_size = 10 * 1024 * 1024,
+    bool auto_flush = true);
 
 struct Module {
   enum { min_level, specific_level };
 
-  Module(const std::string& name, severity_level level)
+  Module(std::string_view name, severity_level level)
       : name_(name), level_type_(Module::min_level), min_level_(level) {}
-  Module(const std::string& name, std::set<severity_level> specific_levels)
+  Module(std::string_view name, std::set<severity_level> specific_levels)
       : name_(name),
         level_type_(Module::specific_level),
         specific_levels_(specific_levels) {}
@@ -188,10 +188,10 @@ bool func_module_severity_filter(
     const std::vector<Module>& modules);
 
 boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
-    const std::string& app_name, const std::string& app_version,
-    const std::vector<Module>& filters, const std::string& file_name_suffix,
-    const std::string& target = "./log",
-    int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
+    std::string_view app_name, std::string_view app_version,
+    const std::vector<Module>& filters, std::string_view file_name_suffix,
+    std::string_view target = "./log", int64_t rotation_size = 10 * 1024 * 1024,
+    bool auto_flush = true);
 
 bool func_module_ptr_severity_filter(
     boost::log::value_ref<std::string> const& ch,
@@ -199,32 +199,32 @@ bool func_module_ptr_severity_filter(
     const std::vector<std::shared_ptr<Module>>& modules);
 
 boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
-    const std::string& app_name, const std::string& app_version,
+    std::string_view app_name, std::string_view app_version,
     const std::vector<std::shared_ptr<Module>>& filters,
-    const std::string& file_name_suffix, const std::string& target = "./log",
+    std::string_view file_name_suffix, std::string_view target = "./log",
     int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
-    const std::string& app_name, const std::string& app_version,
-    const std::string& target = "./log",
-    const std::string& file_name_prefix_format = "{:%Y-%m-%d[%H]}",
+    std::string_view app_name, std::string_view app_version,
+    std::string_view target = "./log",
+    std::string_view file_name_prefix_format = "{:%Y-%m-%d[%H]}",
     bool auto_flush = true);
 
 bool func_severity_filter(boost::log::value_ref<severity_level> const& level,
                           const std::vector<severity_level>& severity_levels);
 
 boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
-    const std::string& app_name, const std::string& app_version,
+    std::string_view app_name, std::string_view app_version,
     const std::vector<severity_level> severity_levels,
-    const std::string& file_name_suffix, const std::string& target = "./log",
+    std::string_view file_name_suffix, std::string_view target = "./log",
     int64_t rotation_size = 10 * 1024 * 1024, bool auto_flush = true);
 
 boost::shared_ptr<cilog_date_hour_async_sink_t>
 init_async_date_hour_level_logger(
-    const std::string& app_name, const std::string& app_version,
+    std::string_view app_name, std::string_view app_version,
     const std::vector<severity_level> severity_levels,
-    const std::string& file_name_suffix, const std::string& target = "./log",
-    const std::string& file_name_prefix_format = "{:%Y-%m-%d[%H]}",
+    std::string_view file_name_suffix, std::string_view target = "./log",
+    std::string_view file_name_prefix_format = "{:%Y-%m-%d[%H]}",
     bool auto_flush = true);
 
 template <typename Sink>

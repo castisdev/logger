@@ -6,15 +6,13 @@
 namespace castis {
 namespace logger {
 namespace accesslog {
-const std::string kDelimiter = " ";
-const std::string kQuotes = "\"";
-const std::string kEmpty = "-";
-std::string request_line(boost::string_view method, boost::string_view uri,
+const inline std::string_view kDelimiter = " ";
+const inline std::string_view kQuotes = "\"";
+const inline std::string_view kEmpty = "-";
+std::string request_line(std::string_view method, std::string_view uri,
                          unsigned version_major /* = 1*/,
                          unsigned version_minor /* = 1*/) {
-  return fmt::format(FMT_STRING("{}{}{}{}HTTP/{}.{}"),
-                     std::string_view(method.data(), method.length()),
-                     kDelimiter, std::string_view(uri.data(), uri.length()),
+  return fmt::format(FMT_STRING("{}{}{}{}HTTP/{}.{}"), method, kDelimiter, uri,
                      kDelimiter, version_major, version_minor);
 }
 
@@ -30,22 +28,22 @@ std::string request_time(boost::posix_time::ptime req_utc) {
   struct tm nowtm;
   localtime_r(&utct, &nowtm);
   char mbstr[64];
-  std::string request_time_str = accesslog::kEmpty;
-  std::size_t n =
+  auto n =
       std::strftime(mbstr, sizeof(mbstr), "[%d/%b/%Y:%H:%M:%S %z]", &nowtm);
-  if (n > 0) request_time_str.assign(mbstr, n);
-  return request_time_str;
+  if (n > 0) {
+    return std::string(mbstr, n);
+  } else {
+    return std::string(accesslog::kEmpty);
+  }
 }
 }  // namespace accesslog
 
-AccessLog::AccessLog(boost::string_view remote_addr,
-                     boost::string_view remote_ident,
-                     boost::string_view user_name,
-                     boost::string_view request_time,
-                     boost::string_view request_line, unsigned status,
-                     std::size_t content_length, boost::string_view referer,
-                     boost::string_view user_agent,
-                     std::uint64_t serve_duration)
+AccessLog::AccessLog(std::string_view remote_addr,
+                     std::string_view remote_ident, std::string_view user_name,
+                     std::string_view request_time,
+                     std::string_view request_line, unsigned status,
+                     std::size_t content_length, std::string_view referer,
+                     std::string_view user_agent, std::uint64_t serve_duration)
     : remote_addr_(remote_addr),
       remote_ident_(remote_ident),
       user_name_(user_name),
