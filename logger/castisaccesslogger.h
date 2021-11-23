@@ -49,23 +49,23 @@ struct AccessLog {
             std::string_view user_agent, std::uint64_t serve_duration);
 
   // Remote client ip : %h
-  std::string_view remote_addr_;
+  std::string remote_addr_;
   // REMOTE_IDENT : The remote logname, user id : %l
-  std::string_view remote_ident_;
+  std::string remote_ident_;
   // The name of the authenticated remote user : %u
-  std::string_view user_name_;
+  std::string user_name_;
   // Request time : Date and time of the request : %t
-  std::string_view request_time_;
+  std::string request_time_;
   // The first line of the request. Example: GET / HTTP/1.0 : %r
-  std::string_view request_line_;
+  std::string request_line_;
   // Final status code of http response : %>s
   unsigned status_;
   // Content-Length of http response : %b
   std::size_t content_length_;
   // Referer of http req header : %{Referer}i
-  std::string_view referer_;
+  std::string referer_;
   // User-Agent of http req heder : %{User-agent}i
-  std::string_view user_agent_;
+  std::string user_agent_;
   // The time taken to serve the request, in microseconds : %D
   std::uint64_t serve_duration_;
 
