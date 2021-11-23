@@ -233,7 +233,7 @@ uintmax_t cilog_backend::parse_index(std::string const& filename) {
 
 namespace castis {
 namespace logger {
-void init_logger(std::string_view app_name, std::string_view app_version,
+void init_logger(std::string app_name, std::string app_version,
                  std::string_view target /* = "./log"*/,
                  int64_t rotation_size /* = 10 * 1024 * 1024*/,
                  bool auto_flush /* = true*/) {
@@ -258,7 +258,7 @@ void init_logger(std::string_view app_name, std::string_view app_version,
 }
 
 boost::shared_ptr<cilog_async_sink_t> init_async_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     std::string_view target /* = "./log"*/,
     int64_t rotation_size /* = 10 * 1024 * 1024*/,
     bool auto_flush /* = true*/) {
@@ -301,7 +301,7 @@ bool func_module_severity_filter(
 }
 
 boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     const std::vector<Module>& filters, std::string_view file_name_suffix,
     std::string_view target /* = "./log"*/,
     int64_t rotation_size /* = 10 * 1024 * 1024*/,
@@ -350,7 +350,7 @@ bool func_module_ptr_severity_filter(
 }
 
 boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     const std::vector<std::shared_ptr<Module>>& filters,
     std::string_view file_name_suffix, std::string_view target /* = "./log"*/,
     int64_t rotation_size /* = 10 * 1024 * 1024*/,
@@ -382,7 +382,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_module_logger(
 }
 
 boost::shared_ptr<cilog_date_hour_async_sink_t> init_async_date_hour_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     std::string_view target /* = "./log"*/,
     std::string_view file_name_prefix_format /* = "%Y-%m-%d[%H]"*/,
     bool auto_flush /* = true*/) {
@@ -419,7 +419,7 @@ bool func_severity_filter(boost::log::value_ref<severity_level> const& level,
 }
 
 boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     const std::vector<severity_level> severity_levels,
     std::string_view file_name_suffix, std::string_view target /* = "./log"*/,
     int64_t rotation_size /* = 10 * 1024 * 1024*/,
@@ -451,7 +451,7 @@ boost::shared_ptr<cilog_async_sink_t> init_async_level_logger(
 
 boost::shared_ptr<cilog_date_hour_async_sink_t>
 init_async_date_hour_level_logger(
-    std::string_view app_name, std::string_view app_version,
+    std::string app_name, std::string app_version,
     const std::vector<severity_level> severity_levels,
     std::string_view file_name_suffix, std::string_view target /* = "./log"*/,
     std::string_view file_name_prefix_format /* = "%Y-%m-%d[%H]"*/,
